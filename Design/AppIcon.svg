@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 200 200">
+  <defs>
+    <clipPath id="heart"><path d="M100 168 C60 140 28 112 28 78 C28 54 46 38 68 38 C82 38 94 46 100 58 C106 46 118 38 132 38 C154 38 172 54 172 78 C172 112 140 140 100 168 Z"/></clipPath>
+    <linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF4D6D"/><stop offset="1" stop-color="#FF8A1F"/></linearGradient>
+    <clipPath id="tri"><path d="M84 70 L134 100 L84 130 Z"/></clipPath>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38E8FF"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="#1B1020"/>
+  <g clip-path="url(#heart)" fill="url(#hg)">
+    <rect x="28" y="30" width="12" height="150"/><rect x="46" y="30" width="12" height="150"/><rect x="64" y="30" width="12" height="150"/>
+    <rect x="82" y="30" width="12" height="150"/><rect x="100" y="30" width="12" height="150"/><rect x="118" y="30" width="12" height="150"/>
+    <rect x="136" y="30" width="12" height="150"/><rect x="154" y="30" width="12" height="150"/>
+  </g>
+  <path d="M80 64 L140 100 L80 136 Z" fill="#1B1020" stroke="#1B1020" stroke-width="10" stroke-linejoin="round"/>
+  <g clip-path="url(#tri)" stroke="url(#lg)" stroke-width="2.2">
+    <path d="M85 64v72M90 64v72M95 64v72M100 64v72M105 64v72M110 64v72M115 64v72M120 64v72M125 64v72M130 64v72"/>
+  </g>
+</svg>
