@@ -1,0 +1,49 @@
+# Описание проекта для XcodeGen: из него в CI создаётся AudioPlayer.xcodeproj
+name: AudioPlayer
+
+options:
+  bundleIdPrefix: com.local
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+
+targets:
+  AudioPlayer:
+    type: application
+    platform: iOS
+    sources:
+      - path: AudioPlayer
+    info:
+      path: AudioPlayer/Info.plist
+      properties:
+        CFBundleDisplayName: Плеер
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIBackgroundModes:
+          - audio
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: Доступ к локальной сети нужен, чтобы принимать музыку с компьютера по Wi-Fi.
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.audioplayer
+        GENERATE_INFOPLIST_FILE: "NO"
+
+schemes:
+  AudioPlayer:
+    build:
+      targets:
+        AudioPlayer: all
+    archive:
+      config: Release
