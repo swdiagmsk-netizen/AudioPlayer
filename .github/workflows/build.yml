@@ -1,1 +1,60 @@
+name: Build IPA
 
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (unsigned archive)
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project AudioPlayer.xcodeproj \
+            -scheme AudioPlayer \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/AudioPlayer.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            2>&1 | tee build.log | tail -n 60
+
+      - name: Show compiler errors
+        if: failure()
+        run: |
+          echo "===== ОШИБКИ КОМПИЛЯЦИИ ====="
+          grep -n "error:" build.log | head -n 50 || echo "Строк с error: не найдено, смотри шаг Build"
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/AudioPlayer.xcarchive/Products/Applications/AudioPlayer.app Payload/
+          zip -qry AudioPlayer.ipa Payload
+          ls -lh AudioPlayer.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: AudioPlayer-ipa
+          path: AudioPlayer.ipa
+          if-no-files-found: error
