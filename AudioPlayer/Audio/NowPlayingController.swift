@@ -91,11 +91,17 @@ final class NowPlayingController {
     }
 
     /// Полное обновление при смене трека.
-    func update(track: TrackRecord, duration: Double, elapsed: Double, rate: Float, isPlaying: Bool) {
+    /// `chapterTitle` — для аудиокниг с главами: в заголовке глава, ниже — книга.
+    func update(track: TrackRecord, chapterTitle: String?, duration: Double, elapsed: Double, rate: Float, isPlaying: Bool) {
         var info: [String: Any] = [:]
-        info[MPMediaItemPropertyTitle] = track.displayTitle
+        if let chapterTitle {
+            info[MPMediaItemPropertyTitle] = chapterTitle
+            info[MPMediaItemPropertyAlbumTitle] = track.displayTitle
+        } else {
+            info[MPMediaItemPropertyTitle] = track.displayTitle
+            if !track.album.isEmpty { info[MPMediaItemPropertyAlbumTitle] = track.album }
+        }
         if !track.artist.isEmpty { info[MPMediaItemPropertyArtist] = track.artist }
-        if !track.album.isEmpty { info[MPMediaItemPropertyAlbumTitle] = track.album }
         info[MPMediaItemPropertyPlaybackDuration] = duration
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsed
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? Double(rate) : 0.0

@@ -33,7 +33,7 @@ struct AudioPlayerApp: App {
                 }
             case .background, .inactive:
                 // Сохраняем позицию, чтобы продолжить с того же места после закрытия
-                container.playback.saveState()
+                container.playback.saveAll()
             @unknown default:
                 break
             }

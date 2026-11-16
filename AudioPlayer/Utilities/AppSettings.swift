@@ -26,6 +26,31 @@ enum SettingsKeys {
     static let rememberFolder = "settings.rememberFolder"
     /// Поисковик для «Найти в интернете»: "google", "yandex", "duckduckgo".
     static let searchEngine = "settings.searchEngine"
+    /// Эквалайзер включён.
+    static let eqEnabled = "settings.eq.enabled"
+    /// Название выбранного пресета ("Ручная" — ручная настройка).
+    static let eqPresetName = "settings.eq.preset"
+    /// Усиления 10 полос, JSON-массив чисел.
+    static let eqGains = "settings.eq.gains"
+    /// Предусилитель, дБ.
+    static let eqPreamp = "settings.eq.preamp"
+    /// Выравнивание громкости.
+    static let normalize = "settings.normalize"
+    /// Плавное затухание в конце трека.
+    static let fadeEnd = "settings.fadeEnd"
+    /// Длительность затухания в конце трека, с (1–10).
+    static let fadeEndSeconds = "settings.fadeEndSeconds"
+    /// Затухание перед паузой по таймеру сна, с (0–60).
+    static let sleepFadeSeconds = "settings.sleepFadeSeconds"
+    /// Запоминать позицию в аудиокнигах.
+    static let rememberAudiobookPosition = "settings.audiobook.remember"
+    /// С какой длительности файл считается аудиокнигой, минуты.
+    static let audiobookThresholdMinutes = "settings.audiobook.threshold"
+    /// Откат при возобновлении аудиокниги, с.
+    static let resumeRewindSeconds = "settings.audiobook.rewind"
+    /// Скорость для музыки и для аудиокниг (хранятся отдельно).
+    static let rateMusic = "state.rate.music"
+    static let rateAudiobook = "state.rate.audiobook"
     /// Последняя открытая вкладка (ListID.key).
     static let lastListKey = "ui.lastListKey"
     /// Последняя открытая папка.
@@ -66,6 +91,32 @@ enum AppSettings {
             components.queryItems = [URLQueryItem(name: "q", value: query)]
         }
         return components.url
+    }
+
+    private static func bool(_ key: String, default value: Bool) -> Bool {
+        UserDefaults.standard.object(forKey: key) == nil ? value : UserDefaults.standard.bool(forKey: key)
+    }
+
+    private static func int(_ key: String, default value: Int) -> Int {
+        UserDefaults.standard.object(forKey: key) == nil ? value : UserDefaults.standard.integer(forKey: key)
+    }
+
+    static var normalizeEnabled: Bool { bool(SettingsKeys.normalize, default: true) }
+    static var fadeEndEnabled: Bool { bool(SettingsKeys.fadeEnd, default: false) }
+    static var fadeEndSeconds: Int { min(max(int(SettingsKeys.fadeEndSeconds, default: 5), 1), 10) }
+    static var sleepFadeSeconds: Int { min(max(int(SettingsKeys.sleepFadeSeconds, default: 15), 0), 60) }
+    static var rememberAudiobookPosition: Bool { bool(SettingsKeys.rememberAudiobookPosition, default: true) }
+    static var audiobookThresholdMinutes: Int { max(int(SettingsKeys.audiobookThresholdMinutes, default: 20), 1) }
+    static var resumeRewindSeconds: Int { min(max(int(SettingsKeys.resumeRewindSeconds, default: 3), 0), 30) }
+
+    /// Сохранённая скорость для музыки или аудиокниг.
+    static func rate(audiobook: Bool) -> Float {
+        let value = UserDefaults.standard.float(forKey: audiobook ? SettingsKeys.rateAudiobook : SettingsKeys.rateMusic)
+        return value > 0 ? value : 1
+    }
+
+    static func setRate(_ rate: Float, audiobook: Bool) {
+        UserDefaults.standard.set(rate, forKey: audiobook ? SettingsKeys.rateAudiobook : SettingsKeys.rateMusic)
     }
 
     /// true — при запуске продолжать воспроизведение с места остановки.

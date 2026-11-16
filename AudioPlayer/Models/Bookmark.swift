@@ -40,3 +40,20 @@ final class ListState {
         set { sortModeRaw = newValue.rawValue }
     }
 }
+
+/// Пользовательский пресет эквалайзера.
+@Model
+final class EQPreset {
+    @Attribute(.unique) var uid: UUID
+    var name: String
+    /// Усиления 10 полос, дБ.
+    var gains: [Float]
+    var createdAt: Date
+
+    init(name: String, gains: [Float]) {
+        self.uid = UUID()
+        self.name = name
+        self.gains = gains
+        self.createdAt = Date()
+    }
+}

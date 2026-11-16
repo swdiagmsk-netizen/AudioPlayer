@@ -59,6 +59,14 @@ final class AudioEngineManager {
     @ObservationIgnored private var tickTask: Task<Void, Never>?
     @ObservationIgnored private var configObserver: NSObjectProtocol?
 
+    // Сохранённые настройки обработки (повторно применяются после пересоздания графа)
+    @ObservationIgnored private var eqEnabled = false
+    @ObservationIgnored private var eqGains: [Float] = Array(repeating: 0, count: 10)
+    @ObservationIgnored private var eqPreamp: Float = 0
+    @ObservationIgnored private var normalizationEnabled = false
+    @ObservationIgnored private var normalizationGainDB: Float = 0
+    @ObservationIgnored private var outputVolume: Float = 1
+
     init() {
         buildGraph()
     }
@@ -77,9 +85,8 @@ final class AudioEngineManager {
         timePitch.pitch = 0
         timePitch.rate = rate
         configureEQ()
-        // Нормализация и эквалайзер настраиваются на этапе 5; пока — без обработки
-        eq.bypass = true
-        dynamics.bypass = true
+        applyProcessing()
+        engine.mainMixerNode.outputVolume = outputVolume
 
         engine.attach(playerNode)
         engine.attach(timePitch)
@@ -142,6 +149,55 @@ final class AudioEngineManager {
     private func startEngineIfNeeded() throws {
         if !engine.isRunning {
             try engine.start()
+        }
+    }
+
+    // MARK: - Обработка звука
+
+    /// Эквалайзер. Выключенный эквалайзер = все полосы и предусилитель по нулям
+    /// (сам узел не отключается: через его общий усилитель работает нормализация).
+    func applyEQ(enabled: Bool, gains: [Float], preamp: Float) {
+        eqEnabled = enabled
+        eqGains = gains
+        eqPreamp = preamp
+        applyProcessing()
+    }
+
+    /// Выравнивание громкости: поправка трека в дБ + мягкий лимитер.
+    func setNormalization(enabled: Bool, gainDB: Float) {
+        normalizationEnabled = enabled
+        normalizationGainDB = gainDB
+        applyProcessing()
+    }
+
+    /// Громкость выхода 0…1 (затухание в конце трека и по таймеру сна).
+    /// Системная громкость iPhone не меняется.
+    func setOutputVolume(_ value: Float) {
+        let clamped = min(max(value, 0), 1)
+        guard abs(clamped - outputVolume) > 0.001 else { return }
+        outputVolume = clamped
+        engine.mainMixerNode.outputVolume = clamped
+    }
+
+    private func applyProcessing() {
+        eq.bypass = false
+        for (index, band) in eq.bands.enumerated() {
+            let gain = eqEnabled && eqGains.indices.contains(index) ? eqGains[index] : 0
+            band.gain = min(max(gain, -12), 12)
+        }
+        let preamp = eqEnabled ? eqPreamp : 0
+        let normalization = normalizationEnabled ? normalizationGainDB : 0
+        eq.globalGain = min(max(preamp + normalization, -24), 24)
+
+        // DynamicsProcessor как мягкий компрессор-лимитер против перегрузки
+        dynamics.bypass = !normalizationEnabled
+        if normalizationEnabled {
+            let unit = dynamics.audioUnit
+            // VERIFY: идентификаторы параметров Apple DynamicsProcessor
+            AudioUnitSetParameter(unit, AudioUnitParameterID(kDynamicsProcessorParam_Threshold), kAudioUnitScope_Global, 0, -10, 0)
+            AudioUnitSetParameter(unit, AudioUnitParameterID(kDynamicsProcessorParam_HeadRoom), kAudioUnitScope_Global, 0, 8, 0)
+            AudioUnitSetParameter(unit, AudioUnitParameterID(kDynamicsProcessorParam_AttackTime), kAudioUnitScope_Global, 0, 0.005, 0)
+            AudioUnitSetParameter(unit, AudioUnitParameterID(kDynamicsProcessorParam_ReleaseTime), kAudioUnitScope_Global, 0, 0.15, 0)
         }
     }
 

@@ -315,6 +315,46 @@ final class LibraryAndBookmarkManager {
         return true
     }
 
+    // MARK: - Аудиокниги
+
+    /// Аудиокнига: .m4b всегда; файл не короче порога (по умолчанию 20 мин);
+    /// файл в папке, помеченной «Аудиокниги» (или в её подпапке).
+    func isAudiobook(_ track: TrackRecord) -> Bool {
+        let ext = (track.fileName as NSString).pathExtension.lowercased()
+        if ext == "m4b" { return true }
+        if track.duration >= Double(AppSettings.audiobookThresholdMinutes * 60) { return true }
+        let folders = audiobookFolders()
+        guard !folders.isEmpty else { return false }
+        let path = track.folderPath
+        return folders.contains { marked in path == marked || path.hasPrefix(marked + "/") }
+    }
+
+    /// Папки, помеченные как «Аудиокниги».
+    func audiobookFolders() -> [String] {
+        let states = (try? context.fetch(FetchDescriptor<ListState>())) ?? []
+        return states
+            .filter { $0.isAudiobookFolder && $0.key.hasPrefix("folder:") }
+            .map { String($0.key.dropFirst("folder:".count)) }
+    }
+
+    func isAudiobookFolder(_ path: String) -> Bool {
+        audiobookFolders().contains(path)
+    }
+
+    /// Помечает папку как «Аудиокниги» (или снимает отметку).
+    func setAudiobookFolder(_ path: String, _ value: Bool) {
+        let key = "folder:" + path
+        let states = (try? context.fetch(FetchDescriptor<ListState>())) ?? []
+        if let state = states.first(where: { $0.key == key }) {
+            state.isAudiobookFolder = value
+        } else {
+            let state = ListState(key: key)
+            state.isAudiobookFolder = value
+            context.insert(state)
+        }
+        saveContext("audiobookFolder")
+    }
+
     // MARK: - Закладки
 
     /// Добавляет закладку на заданной секунде трека.

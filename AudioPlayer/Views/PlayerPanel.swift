@@ -8,6 +8,10 @@ struct PlayerPanel: View {
     let onImport: () -> Void
     let onSettings: () -> Void
     let onBookmark: () -> Void
+    let onBookmarksList: () -> Void
+    let onEqualizer: () -> Void
+    let onSleepTimer: () -> Void
+    let onChapters: () -> Void
 
     @Environment(\.palette) private var palette
     @AppStorage(SettingsKeys.skipInterval) private var skipInterval: Int = 15
@@ -24,7 +28,8 @@ struct PlayerPanel: View {
                 track: playback.currentTrack,
                 rowNumber: currentRowNumber,
                 time: isDragging ? dragValue : engine.currentTime,
-                isPlaying: engine.isPlaying
+                isPlaying: engine.isPlaying,
+                chapterTitle: playback.currentChapter?.title
             )
             progress
             mainControls
@@ -203,12 +208,75 @@ struct PlayerPanel: View {
             .accessibilityLabel("Скорость \(PlaybackSpeed.label(engine.rate))")
 
             Spacer(minLength: 0)
-            iconButton("bookmark", label: "Добавить закладку", action: onBookmark)
+            iconButton("slider.vertical.3", label: "Эквалайзер", action: onEqualizer)
+            Spacer(minLength: 0)
+            Menu {
+                Button {
+                    onBookmark()
+                } label: {
+                    Label("Добавить закладку", systemImage: "bookmark")
+                }
                 .disabled(!hasTrack)
+                Button {
+                    onBookmarksList()
+                } label: {
+                    Label("Все закладки", systemImage: "list.bullet")
+                }
+            } label: {
+                Image(systemName: "bookmark")
+                    .font(.system(size: 20))
+                    .foregroundStyle(palette.secondaryText)
+                    .frame(width: 44, height: 44)
+            } primaryAction: {
+                if hasTrack {
+                    onBookmark()
+                } else {
+                    onBookmarksList()
+                }
+            }
+            .accessibilityLabel("Закладка: нажмите — добавить, удерживайте — список")
+            Spacer(minLength: 0)
+            sleepButton
+            if !playback.chapters.isEmpty {
+                Spacer(minLength: 0)
+                iconButton("list.number", label: "Главы", action: onChapters)
+            }
             Spacer(minLength: 0)
             iconButton("plus.circle", label: "Добавить файлы", action: onImport)
             Spacer(minLength: 0)
             iconButton("gearshape", label: "Настройки", action: onSettings)
+        }
+    }
+
+    /// Луна таймера сна; при работающем таймере — оставшееся время.
+    private var sleepButton: some View {
+        Button(action: onSleepTimer) {
+            VStack(spacing: 0) {
+                Image(systemName: playback.sleepTimer.isActive ? "moon.fill" : "moon")
+                    .font(.system(size: 18))
+                    .foregroundStyle(playback.sleepTimer.isActive ? palette.accent : palette.secondaryText)
+                if playback.sleepTimer.isActive {
+                    Text(sleepLabel)
+                        .font(.system(size: 9, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(palette.accent)
+                }
+            }
+            .frame(width: 44, height: 44)
+        }
+        .buttonStyle(PressDarkenStyle())
+        .accessibilityLabel(playback.sleepTimer.isActive ? "Таймер сна: \(sleepLabel)" : "Таймер сна")
+    }
+
+    private var sleepLabel: String {
+        switch playback.sleepTimer.mode {
+        case .endOfTrack: return "трек"
+        case .until:
+            let seconds = Int(playback.sleepTimer.remaining.rounded(.up))
+            return seconds >= 3600
+                ? String(format: "%d:%02d", seconds / 3600, (seconds % 3600) / 60)
+                : String(format: "%d:%02d", seconds / 60, seconds % 60)
+        case .off: return ""
         }
     }
 
@@ -230,6 +298,7 @@ struct LCDDisplay: View {
     let rowNumber: Int?
     let time: Double
     let isPlaying: Bool
+    let chapterTitle: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -255,6 +324,12 @@ struct LCDDisplay: View {
                 .foregroundStyle(Palette.lcdText)
                 .lineLimit(1)
                 .truncationMode(.tail)
+            if let chapterTitle {
+                Text("ГЛАВА: " + chapterTitle)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(Palette.lcdDim)
+                    .lineLimit(1)
+            }
             SpectrumPlaceholder(isPlaying: isPlaying)
                 .frame(height: 30)
         }

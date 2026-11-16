@@ -12,6 +12,12 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.showHitTab) private var showHitTab = true
     @AppStorage(SettingsKeys.showSuperTab) private var showSuperTab = true
     @State private var showLog = false
+    @AppStorage(SettingsKeys.normalize) private var normalize = true
+    @AppStorage(SettingsKeys.fadeEnd) private var fadeEnd = false
+    @AppStorage(SettingsKeys.fadeEndSeconds) private var fadeEndSeconds = 5
+    @AppStorage(SettingsKeys.rememberAudiobookPosition) private var rememberBooks = true
+    @AppStorage(SettingsKeys.audiobookThresholdMinutes) private var bookThreshold = 20
+    @AppStorage(SettingsKeys.resumeRewindSeconds) private var rewindSeconds = 3
 
     var body: some View {
         NavigationStack {
@@ -23,6 +29,31 @@ struct SettingsView: View {
                         Text("Тёмная").tag("dark")
                     }
                     .pickerStyle(.segmented)
+                }
+                Section("Звук и воспроизведение") {
+                    Toggle("Выравнивание громкости", isOn: $normalize)
+                        .onChange(of: normalize) { _, _ in
+                            container.playback.applyNormalizationSetting()
+                        }
+                    Toggle("Плавное затухание в конце трека", isOn: $fadeEnd)
+                    if fadeEnd {
+                        Stepper("Длительность затухания: \(fadeEndSeconds) с", value: $fadeEndSeconds, in: 1...10)
+                    }
+                }
+                Section("Аудиокниги") {
+                    Toggle("Запоминать позицию", isOn: $rememberBooks)
+                    Picker("Аудиокнига — файлы от", selection: $bookThreshold) {
+                        Text("10 мин").tag(10)
+                        Text("20 мин").tag(20)
+                        Text("30 мин").tag(30)
+                        Text("60 мин").tag(60)
+                    }
+                    Picker("Откат при возобновлении", selection: $rewindSeconds) {
+                        Text("0 с").tag(0)
+                        Text("3 с").tag(3)
+                        Text("5 с").tag(5)
+                        Text("10 с").tag(10)
+                    }
                 }
                 Section("Библиотека") {
                     Toggle("Сердечко «Супер!» в строках", isOn: $showHeart)

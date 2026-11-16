@@ -11,6 +11,7 @@ final class AppContainer {
     let library: LibraryAndBookmarkManager
     let lists: QueueAndPlaylistManager
     let playback: PlaybackController
+    let equalizer: EqualizerManager
 
     /// Первое сканирование и восстановление состояния уже выполнены.
     private(set) var didFinishLaunchTasks = false
@@ -21,7 +22,8 @@ final class AppContainer {
             Playlist.self,
             PlaylistEntry.self,
             Bookmark.self,
-            ListState.self
+            ListState.self,
+            EQPreset.self
         ])
         let container: ModelContainer
         do {
@@ -41,8 +43,14 @@ final class AppContainer {
         modelContainer = container
         library = LibraryAndBookmarkManager(context: container.mainContext)
         lists = QueueAndPlaylistManager(context: container.mainContext, library: library)
+        equalizer = EqualizerManager(context: container.mainContext)
         playback = PlaybackController(library: library)
         playback.setUp()
+        equalizer.onChange = { [weak playback, weak equalizer] in
+            guard let playback, let equalizer else { return }
+            playback.engine.applyEQ(enabled: equalizer.isEnabled, gains: equalizer.gains, preamp: equalizer.preamp)
+        }
+        equalizer.onChange?()
 
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
@@ -56,5 +64,7 @@ final class AppContainer {
         await library.rescan()
         playback.restoreOnLaunch()
         didFinishLaunchTasks = true
+        // Фоновый анализ громкости для выравнивания
+        playback.analyzeLibraryLoudness()
     }
 }

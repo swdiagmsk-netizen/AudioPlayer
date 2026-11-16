@@ -26,6 +26,12 @@ struct ContentView: View {
     @State private var renameText = ""
     @State private var playlistToDelete: Playlist?
     @State private var toast: String?
+    @State private var showEqualizer = false
+    @State private var showSleepTimer = false
+    @State private var showBookmarks = false
+    @State private var showChapters = false
+    @State private var bookmarkForNote: Bookmark?
+    @State private var bookmarkNote = ""
     @State private var toastTask: Task<Void, Never>?
 
     private var palette: Palette {
@@ -42,7 +48,11 @@ struct ContentView: View {
                 currentRowNumber: currentRowNumber,
                 onImport: { showImporter = true },
                 onSettings: { showSettings = true },
-                onBookmark: addBookmark
+                onBookmark: addBookmark,
+                onBookmarksList: { showBookmarks = true },
+                onEqualizer: { showEqualizer = true },
+                onSleepTimer: { showSleepTimer = true },
+                onChapters: { showChapters = true }
             )
             ListTabsBar(
                 selected: $selectedList,
@@ -131,6 +141,41 @@ struct ContentView: View {
         }
         .sheet(item: $addTarget) { target in
             AddToPlaylistSheet(lists: lists, tracks: target.tracks, onDone: showToast)
+        }
+        .sheet(isPresented: $showEqualizer) {
+            EqualizerView(equalizer: container.equalizer)
+                .environment(\.palette, palette)
+        }
+        .sheet(isPresented: $showSleepTimer) {
+            SleepTimerView(timer: playback.sleepTimer)
+                .environment(\.palette, palette)
+                .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showBookmarks) {
+            BookmarksView(container: container)
+                .environment(\.palette, palette)
+        }
+        .sheet(isPresented: $showChapters) {
+            ChaptersView(playback: playback)
+                .environment(\.palette, palette)
+                .presentationDetents([.medium, .large])
+        }
+        .alert(
+            "Закладка на \(TimeText.format(bookmarkForNote?.time ?? 0))",
+            isPresented: Binding(get: { bookmarkForNote != nil }, set: { if !$0 { bookmarkForNote = nil } })
+        ) {
+            TextField("Заметка (можно пропустить)", text: $bookmarkNote)
+            Button("Сохранить") {
+                if let bookmark = bookmarkForNote, !bookmarkNote.isEmpty {
+                    container.library.updateBookmark(bookmark, note: bookmarkNote)
+                }
+                bookmarkNote = ""
+                bookmarkForNote = nil
+            }
+            Button("Без заметки", role: .cancel) {
+                bookmarkNote = ""
+                bookmarkForNote = nil
+            }
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(container: container)
@@ -255,8 +300,8 @@ struct ContentView: View {
     private func addBookmark() {
         guard let track = playback.currentTrack else { return }
         let time = playback.engine.computeCurrentTime()
-        container.library.addBookmark(to: track, time: time, note: "")
-        showToast("Закладка на \(TimeText.format(time))")
+        bookmarkNote = ""
+        bookmarkForNote = container.library.addBookmark(to: track, time: time, note: "")
     }
 
     private func handleImport(_ result: Result<[URL], Error>) {

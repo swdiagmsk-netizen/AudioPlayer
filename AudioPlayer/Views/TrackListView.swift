@@ -380,6 +380,13 @@ struct TrackListView: View {
         .listRowSeparatorTint(palette.line)
         .selectionDisabled()
         .contextMenu {
+            let isBooks = container.library.isAudiobookFolder(full)
+            Button {
+                container.library.setAudiobookFolder(full, !isBooks)
+                onToast(isBooks ? "Отметка «Аудиокниги» снята" : "Папка помечена как «Аудиокниги»")
+            } label: {
+                Label(isBooks ? "Снять отметку «Аудиокниги»" : "Пометить как «Аудиокниги»", systemImage: "book")
+            }
             Button(role: .destructive) {
                 folderToDelete = full
             } label: {
