@@ -67,6 +67,7 @@ jobs:
           path: PlayMyDisk.ipa
           if-no-files-found: error
 
+      # Постоянная страница загрузки: Releases → latest (ссылка для друзей)
       - name: Publish release
         continue-on-error: true
         run: |
@@ -78,6 +79,22 @@ jobs:
             gh release create latest PlayMyDisk.ipa --title "PlayMyDisk (сборка ${{ github.run_number }})" --notes "$NOTES"
           fi
 
+      # Модульные тесты логики очереди (True Shuffle, повтор) на симуляторе.
+      # Не мешают выпуску ipa: результат попадает в tests.txt в ветке ci-logs.
+      - name: Unit tests (simulator)
+        continue-on-error: true
+        run: |
+          SIM=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          echo "Simulator: $SIM"
+          set -o pipefail
+          xcodebuild test \
+            -project AudioPlayer.xcodeproj \
+            -scheme AudioPlayer \
+            -destination "id=$SIM" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee test.log | grep -E "Test Suite|Test Case .* failed|error:|Executed" | tail -n 80
+
+      # Короткий отчёт о сборке кладётся в ветку ci-logs, чтобы ошибки можно было прочитать без входа в GitHub
       - name: Publish build log
         if: always()
         continue-on-error: true
@@ -89,6 +106,12 @@ jobs:
             grep "error:" "$LOG" | sort -u | head -n 300 > errors.txt || true
             grep "warning:" "$LOG" | sort -u | head -n 300 > warnings.txt || true
             tail -n 200 "$LOG" > tail.txt || true
+          fi
+          TLOG="$GITHUB_WORKSPACE/test.log"
+          if [ -f "$TLOG" ]; then
+            grep -E "Test Suite '.*' (passed|failed)|Test Case .* (passed|failed)|Executed [0-9]+ test|error:|TEST (SUCCEEDED|FAILED)" "$TLOG" | head -n 200 > tests.txt || true
+          else
+            echo "Тесты не запускались" > tests.txt
           fi
           git init -q -b ci-logs
           git config user.name "github-actions"
