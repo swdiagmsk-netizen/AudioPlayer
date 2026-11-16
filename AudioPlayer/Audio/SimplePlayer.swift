@@ -1,71 +1,31 @@
-import AVFoundation
-import Observation
+import Foundation
 
-/// Временный простой плеер: один файл через AVAudioEngine.
-/// На этапе 2 его заменит полноценный AudioEngineManager.
-@MainActor
-@Observable
-final class SimplePlayer {
-    var title: String = ""
-    var status: String = ""
-    var isPlaying: Bool = false
-    var hasFile: Bool = false
+// Файл оставлен с прежним именем, чтобы не удалять его из репозитория вручную.
+// Временный плеер этапа 0 заменён на AudioEngineManager + PlaybackController.
 
-    @ObservationIgnored private let engine = AVAudioEngine()
-    @ObservationIgnored private let node = AVAudioPlayerNode()
+/// Скорости воспроизведения.
+enum PlaybackSpeed {
+    /// Полный список (долгое нажатие на кнопку скорости).
+    static let all: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 3, 4]
+    /// Быстрый цикл по нажатию: 1 → 1.5 → 2 → 3 → 4 → 1.
+    static let cycle: [Float] = [1, 1.5, 2, 3, 4]
 
-    init() {
-        engine.attach(node)
+    /// Следующая скорость для короткого нажатия.
+    static func next(after current: Float) -> Float {
+        if let index = cycle.firstIndex(where: { abs($0 - current) < 0.01 }) {
+            return cycle[(index + 1) % cycle.count]
+        }
+        // Текущая скорость не из цикла (например, 0.75) — ближайшая большая из цикла
+        return cycle.first(where: { $0 > current }) ?? cycle[0]
     }
 
-    /// Запускает файл из библиотеки.
-    func playFile(at url: URL, title: String) {
-        do {
-            // Категория .playback — звук продолжается при заблокированном экране
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default)
-            try session.setActive(true)
-
-            let file = try AVAudioFile(forReading: url)
-
-            node.stop()
-            // Подключаем узел с форматом конкретного файла (частота/каналы)
-            engine.connect(node, to: engine.mainMixerNode, format: file.processingFormat)
-            if !engine.isRunning {
-                try engine.start()
-            }
-            node.scheduleFile(file, at: nil, completionHandler: nil)
-            node.play()
-
-            self.title = title
-            status = "Играет"
-            isPlaying = true
-            hasFile = true
-        } catch {
-            status = "Ошибка: \(error.localizedDescription)"
-            isPlaying = false
-            AppLogger.shared.log("audio", "Не удалось воспроизвести \(url.lastPathComponent): \(error.localizedDescription)")
+    /// Подпись: "1x", "1.5x", "0.75x".
+    static func label(_ rate: Float) -> String {
+        if abs(rate - rate.rounded()) < 0.01 {
+            return "\(Int(rate.rounded()))x"
         }
-    }
-
-    func togglePlayPause() {
-        guard hasFile else { return }
-        if isPlaying {
-            node.pause()
-            isPlaying = false
-            status = "Пауза"
-        } else {
-            do {
-                if !engine.isRunning {
-                    try engine.start()
-                }
-                node.play()
-                isPlaying = true
-                status = "Играет"
-            } catch {
-                status = "Ошибка: \(error.localizedDescription)"
-                AppLogger.shared.log("audio", "Не удалось продолжить воспроизведение: \(error.localizedDescription)")
-            }
-        }
+        var text = String(format: "%.2f", rate)
+        while text.hasSuffix("0") { text.removeLast() }
+        return text + "x"
     }
 }

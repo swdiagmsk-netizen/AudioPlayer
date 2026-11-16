@@ -2,14 +2,17 @@ import Foundation
 import SwiftData
 import Observation
 
-/// Общие объекты приложения: база данных, библиотека, плеер.
+/// Общие объекты приложения: база данных, библиотека, воспроизведение.
 /// Создаётся один раз при запуске.
 @MainActor
 @Observable
 final class AppContainer {
     let modelContainer: ModelContainer
     let library: LibraryAndBookmarkManager
-    let player: SimplePlayer
+    let playback: PlaybackController
+
+    /// Первое сканирование и восстановление состояния уже выполнены.
+    private(set) var didFinishLaunchTasks = false
 
     init() {
         let schema = Schema([
@@ -36,11 +39,20 @@ final class AppContainer {
         }
         modelContainer = container
         library = LibraryAndBookmarkManager(context: container.mainContext)
-        player = SimplePlayer()
+        playback = PlaybackController(library: library)
+        playback.setUp()
 
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         AppLogger.shared.log("app", "Запуск PlayMyDisk \(version) (сборка \(build))")
+    }
+
+    /// Задачи при запуске: сканирование библиотеки и восстановление воспроизведения.
+    func runLaunchTasks() async {
+        guard !didFinishLaunchTasks else { return }
+        await library.rescan()
+        playback.restoreOnLaunch()
+        didFinishLaunchTasks = true
     }
 }

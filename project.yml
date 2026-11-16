@@ -33,6 +33,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSLocalNetworkUsageDescription: Доступ к локальной сети нужен, чтобы принимать музыку с компьютера по Wi-Fi.
         UILaunchScreen: {}
+        UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         # Приложение предлагается в «Открыть в…» для аудиофайлов

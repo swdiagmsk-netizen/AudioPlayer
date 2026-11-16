@@ -10,8 +10,8 @@ struct AudioPlayerApp: App {
         WindowGroup {
             ContentView(container: container)
                 .task {
-                    // Первое сканирование библиотеки при запуске
-                    await container.library.rescan()
+                    // Сканирование библиотеки и продолжение с места остановки
+                    await container.runLaunchTasks()
                 }
                 .onOpenURL { url in
                     // «Поделиться → Открыть в PlayMyDisk»
@@ -21,11 +21,19 @@ struct AudioPlayerApp: App {
                 }
         }
         .onChange(of: scenePhase) { _, newPhase in
-            // Вернулись в приложение — файлы могли добавить через «Файлы»
-            if newPhase == .active {
-                Task {
-                    await container.library.rescan()
+            switch newPhase {
+            case .active:
+                // Вернулись в приложение — файлы могли добавить через «Файлы»
+                if container.didFinishLaunchTasks {
+                    Task {
+                        await container.library.rescan()
+                    }
                 }
+            case .background, .inactive:
+                // Сохраняем позицию, чтобы продолжить с того же места после закрытия
+                container.playback.saveState()
+            @unknown default:
+                break
             }
         }
     }
