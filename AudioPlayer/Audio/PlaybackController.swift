@@ -26,6 +26,8 @@ final class PlaybackController {
     let engine = AudioEngineManager()
     /// Таймер сна.
     let sleepTimer = SleepTimer()
+    /// Спектр для визуализатора.
+    let spectrum = SpectrumAnalyzer()
 
     @ObservationIgnored private let library: LibraryAndBookmarkManager
     @ObservationIgnored private let session = AudioSessionController()
@@ -85,6 +87,12 @@ final class PlaybackController {
         }
         session.startObserving()
         nowPlaying.installCommands(target: self)
+        engine.setSpectrumAnalyzer(spectrum)
+    }
+
+    /// Визуализатор нужен только когда приложение на экране (экономия батареи).
+    func setVisualizerActive(_ active: Bool) {
+        engine.setSpectrumAnalyzer(active ? spectrum : nil)
     }
 
     // MARK: - Состояние для интерфейса

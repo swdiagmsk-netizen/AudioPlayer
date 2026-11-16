@@ -1,6 +1,16 @@
 import SwiftUI
+import UIKit
 
 extension Color {
+    /// Строка "#RRGGBB" для сохранения в настройках.
+    var hexString: String {
+        let ui = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+        func clamp(_ v: CGFloat) -> Int { Int((min(max(v, 0), 1) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", clamp(r), clamp(g), clamp(b))
+    }
+
     /// Цвет из строки "#RRGGBB" или "RRGGBB". Неверная строка — серый.
     init(hex: String) {
         var text = hex.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -43,6 +53,18 @@ struct Palette: Sendable {
     static let defaultAccentHex = "#FF8A1F"
     static let heart = Color(hex: "#FF4D6D")
     static let danger = Color(hex: "#E5484D")
+
+    /// Цвета с учётом своих цветов фона и текста из настроек ("" — стандартные).
+    static func make(dark: Bool, accentHex: String, backgroundHex: String, textHex: String) -> Palette {
+        var palette = make(dark: dark, accentHex: accentHex)
+        if !backgroundHex.isEmpty {
+            palette.background = Color(hex: backgroundHex)
+        }
+        if !textHex.isEmpty {
+            palette.text = Color(hex: textHex)
+        }
+        return palette
+    }
 
     static func make(dark: Bool, accentHex: String) -> Palette {
         let accent = Color(hex: accentHex)

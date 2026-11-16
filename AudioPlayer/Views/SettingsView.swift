@@ -1,95 +1,123 @@
 import SwiftUI
 
-/// Настройки. Сейчас — тема и основные пункты; полный экран
-/// со всеми разделами по макету появится на этапе 6.
+/// Настройки: главная страница — 6 разделов кнопками, внизу «Память» и версия.
 struct SettingsView: View {
     let container: AppContainer
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.palette) private var palette
+
+    @AppStorage(SettingsKeys.appLanguage) private var language = "en"
     @AppStorage(SettingsKeys.themeMode) private var themeMode = "auto"
-    @AppStorage(SettingsKeys.showHeart) private var showHeart = true
-    @AppStorage(SettingsKeys.showPlayCount) private var showPlayCount = true
-    @AppStorage(SettingsKeys.showHitTab) private var showHitTab = true
-    @AppStorage(SettingsKeys.showSuperTab) private var showSuperTab = true
-    @State private var showLog = false
+    @AppStorage(SettingsKeys.skin) private var skin = "classic"
+    @AppStorage(SettingsKeys.visualizer) private var visualizer = VisualizerKind.bars.rawValue
     @AppStorage(SettingsKeys.normalize) private var normalize = true
     @AppStorage(SettingsKeys.fadeEnd) private var fadeEnd = false
-    @AppStorage(SettingsKeys.fadeEndSeconds) private var fadeEndSeconds = 5
-    @AppStorage(SettingsKeys.rememberAudiobookPosition) private var rememberBooks = true
-    @AppStorage(SettingsKeys.audiobookThresholdMinutes) private var bookThreshold = 20
-    @AppStorage(SettingsKeys.resumeRewindSeconds) private var rewindSeconds = 3
+    @AppStorage(SettingsKeys.haptics) private var haptics = false
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Внешний вид") {
-                    Picker("Тема", selection: $themeMode) {
-                        Text("Авто").tag("auto")
-                        Text("Светлая").tag("light")
-                        Text("Тёмная").tag("dark")
+            List {
+                Section {
+                    sectionLink("Язык", value: LanguageOption.name(for: language), icon: "character.bubble", tint: Color(hex: "#2F9BFF")) {
+                        LanguageSettingsView()
                     }
-                    .pickerStyle(.segmented)
-                }
-                Section("Звук и воспроизведение") {
-                    Toggle("Выравнивание громкости", isOn: $normalize)
-                        .onChange(of: normalize) { _, _ in
-                            container.playback.applyNormalizationSetting()
-                        }
-                    Toggle("Плавное затухание в конце трека", isOn: $fadeEnd)
-                    if fadeEnd {
-                        Stepper("Длительность затухания: \(fadeEndSeconds) с", value: $fadeEndSeconds, in: 1...10)
+                    sectionLink("Внешний вид", value: appearanceSummary, icon: "circle.lefthalf.filled", tint: Color(hex: "#8B5CF6")) {
+                        AppearanceSettingsView()
                     }
-                }
-                Section("Аудиокниги") {
-                    Toggle("Запоминать позицию", isOn: $rememberBooks)
-                    Picker("Аудиокнига — файлы от", selection: $bookThreshold) {
-                        Text("10 мин").tag(10)
-                        Text("20 мин").tag(20)
-                        Text("30 мин").tag(30)
-                        Text("60 мин").tag(60)
+                    sectionLink("Звук и воспроизведение", value: soundSummary, icon: "music.note", tint: Color(hex: "#FF8A1F")) {
+                        SoundSettingsView(container: container)
                     }
-                    Picker("Откат при возобновлении", selection: $rewindSeconds) {
-                        Text("0 с").tag(0)
-                        Text("3 с").tag(3)
-                        Text("5 с").tag(5)
-                        Text("10 с").tag(10)
+                    sectionLink("Библиотека и плейлисты", value: "Плейлисты, ★ и ♥, дубликаты, счётчик", icon: "books.vertical", tint: Color(hex: "#22C55E")) {
+                        LibrarySettingsView(container: container)
+                    }
+                    sectionLink("Помощь", value: "Инструкция, письмо разработчику, друзьям", icon: "questionmark.circle", tint: Color(hex: "#14B8A6")) {
+                        HelpSettingsView()
+                    }
+                    sectionLink("О приложении", value: "Версия, форматы, кэш обложек", icon: "info.circle", tint: Color(hex: "#5C6470")) {
+                        AboutSettingsView(container: container)
                     }
                 }
-                Section("Библиотека") {
-                    Toggle("Сердечко «Супер!» в строках", isOn: $showHeart)
-                    Toggle("Счётчик прослушиваний", isOn: $showPlayCount)
-                    Toggle("Показывать вкладку ★", isOn: $showHitTab)
-                    Toggle("Показывать вкладку ♥", isOn: $showSuperTab)
+
+                Section("Память") {
+                    StorageInfoView()
                 }
-                Section("О приложении") {
-                    Button("Журнал отладки") {
-                        showLog = true
-                    }
-                    HStack {
-                        Text("Версия")
-                        Spacer()
-                        Text(versionText)
-                            .foregroundStyle(.secondary)
-                    }
+
+                Section {
+                    Text("PlayMyDisk \(AppInfo.versionText)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
                 }
             }
-            .sheet(isPresented: $showLog) {
-                DebugLogView()
-            }
+            .listStyle(.insetGrouped)
             .navigationTitle("Настройки")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                    Button("Готово") {
+                        Haptics.tap()
+                        dismiss()
+                    }
                 }
             }
         }
+        .tint(palette.accent)
     }
 
-    private var versionText: String {
+    private var appearanceSummary: String {
+        let theme = ["auto": "Авто", "light": "Светлая", "dark": "Тёмная"][themeMode] ?? "Авто"
+        let skinName = SkinOption.name(for: skin)
+        let viz = (VisualizerKind(rawValue: visualizer) ?? .bars).title
+        return "\(theme) · \(skinName) · \(viz)"
+    }
+
+    private var soundSummary: String {
+        func onOff(_ value: Bool) -> String { value ? "вкл" : "выкл" }
+        return "Нормализация \(onOff(normalize)) · затухание \(onOff(fadeEnd)) · вибрация \(onOff(haptics))"
+    }
+
+    private func sectionLink<Destination: View>(
+        _ title: String,
+        value: String,
+        icon: String,
+        tint: Color,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink {
+            destination()
+                .onAppear { Haptics.select() }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(tint))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body.weight(.medium))
+                    Text(value)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+}
+
+/// Версия приложения.
+enum AppInfo {
+    static var versionText: String {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         return "\(version) (сборка \(build))"
     }
+
+    static let developerEmail = "swdiag.msk@gmail.com"
+    static let downloadPage = URL(string: "https://github.com/swdiagmsk-netizen/AudioPlayer/releases/latest")!
 }

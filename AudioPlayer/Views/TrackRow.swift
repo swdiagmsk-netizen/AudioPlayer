@@ -58,7 +58,10 @@ struct TrackRow: View {
             .accessibilityLabel("\(item.number). \(track.artist) — \(track.displayTitle)")
 
             if showHeart {
-                Button(action: onToggleSuper) {
+                Button {
+                    Haptics.select()
+                    onToggleSuper()
+                } label: {
                     Image(systemName: track.isSuper ? "heart.fill" : "heart")
                         .font(.system(size: 18))
                         .foregroundStyle(track.isSuper ? Palette.heart : palette.secondaryText)
@@ -86,7 +89,10 @@ struct TrackRow: View {
             .foregroundStyle(palette.secondaryText)
             .frame(width: 46, alignment: .trailing)
 
-            Button(action: onMenu) {
+            Button {
+                Haptics.tap()
+                onMenu()
+            } label: {
                 Image(systemName: "gearshape")
                     .font(.system(size: 17))
                     .foregroundStyle(palette.secondaryText)

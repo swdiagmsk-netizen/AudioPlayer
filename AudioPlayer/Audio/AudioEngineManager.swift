@@ -66,6 +66,8 @@ final class AudioEngineManager {
     @ObservationIgnored private var normalizationEnabled = false
     @ObservationIgnored private var normalizationGainDB: Float = 0
     @ObservationIgnored private var outputVolume: Float = 1
+    @ObservationIgnored private var spectrumAnalyzer: SpectrumAnalyzer?
+    @ObservationIgnored private var tapInstalled = false
 
     init() {
         buildGraph()
@@ -76,6 +78,7 @@ final class AudioEngineManager {
     /// Создаёт узлы заново (нужно и при первом запуске, и после сброса медиасервисов iOS).
     private func buildGraph() {
         engine = AVAudioEngine()
+        tapInstalled = false
         playerNode = AVAudioPlayerNode()
         timePitch = AVAudioUnitTimePitch()
         eq = AVAudioUnitEQ(numberOfBands: 10)
@@ -93,6 +96,7 @@ final class AudioEngineManager {
         engine.attach(eq)
         engine.attach(dynamics)
 
+        reinstallTap()
         observeConfigurationChange()
     }
 
@@ -198,6 +202,32 @@ final class AudioEngineManager {
             AudioUnitSetParameter(unit, AudioUnitParameterID(kDynamicsProcessorParam_HeadRoom), kAudioUnitScope_Global, 0, 8, 0)
             AudioUnitSetParameter(unit, AudioUnitParameterID(kDynamicsProcessorParam_AttackTime), kAudioUnitScope_Global, 0, 0.005, 0)
             AudioUnitSetParameter(unit, AudioUnitParameterID(kDynamicsProcessorParam_ReleaseTime), kAudioUnitScope_Global, 0, 0.15, 0)
+        }
+    }
+
+    // MARK: - Визуализатор
+
+    /// Подключает анализатор спектра к выходу (nil — отключить, например в фоне).
+    func setSpectrumAnalyzer(_ analyzer: SpectrumAnalyzer?) {
+        spectrumAnalyzer = analyzer
+        reinstallTap()
+    }
+
+    private func reinstallTap() {
+        let mixer = engine.mainMixerNode
+        if tapInstalled {
+            mixer.removeTap(onBus: 0)
+            tapInstalled = false
+        }
+        guard let analyzer = spectrumAnalyzer else { return }
+        Self.installTap(on: mixer, analyzer: analyzer)
+        tapInstalled = true
+    }
+
+    /// Блок tap вызывается с аудиопотока: он создаётся вне главного актора.
+    private nonisolated static func installTap(on mixer: AVAudioMixerNode, analyzer: SpectrumAnalyzer) {
+        mixer.installTap(onBus: 0, bufferSize: 1024, format: nil) { buffer, _ in
+            analyzer.process(buffer)
         }
     }
 

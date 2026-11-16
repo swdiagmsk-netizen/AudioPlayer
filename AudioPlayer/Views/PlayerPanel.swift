@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Верхняя панель плеера: ЖК-дисплей, перемотка, кнопки управления.
 struct PlayerPanel: View {
@@ -15,6 +16,13 @@ struct PlayerPanel: View {
 
     @Environment(\.palette) private var palette
     @AppStorage(SettingsKeys.skipInterval) private var skipInterval: Int = 15
+    @AppStorage(SettingsKeys.skin) private var skin = "classic"
+    @AppStorage(SettingsKeys.retroStyle) private var retroStyle = "cassette"
+    @AppStorage(SettingsKeys.visualizer) private var visualizer = VisualizerKind.bars.rawValue
+    @AppStorage(SettingsKeys.lineColorHex) private var lineColorHex = "#6CFF7E"
+
+    /// Car Mode: крупные кнопки.
+    private var big: CGFloat { skin == "car" ? 1.3 : 1 }
 
     @State private var isDragging = false
     @State private var dragValue: Double = 0
@@ -24,13 +32,7 @@ struct PlayerPanel: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            LCDDisplay(
-                track: playback.currentTrack,
-                rowNumber: currentRowNumber,
-                time: isDragging ? dragValue : engine.currentTime,
-                isPlaying: engine.isPlaying,
-                chapterTitle: playback.currentChapter?.title
-            )
+            display
             progress
             mainControls
             secondaryControls
@@ -41,6 +43,40 @@ struct PlayerPanel: View {
         .background(palette.panel)
         .overlay(alignment: .bottom) {
             Rectangle().fill(palette.line).frame(height: 1)
+        }
+    }
+
+    // MARK: - Дисплей по скину
+
+    private var visualizerKind: VisualizerKind {
+        VisualizerKind(rawValue: visualizer) ?? .bars
+    }
+
+    @ViewBuilder
+    private var display: some View {
+        let time = isDragging ? dragValue : engine.currentTime
+        switch skin {
+        case "modern":
+            ModernDisplay(playback: playback, time: time)
+        case "retro":
+            RetroDisplay(playback: playback, time: time, vinyl: retroStyle == "vinyl")
+        case "car":
+            CarDisplay(playback: playback, rowNumber: currentRowNumber, time: time)
+        default:
+            LCDDisplay(
+                track: playback.currentTrack,
+                rowNumber: currentRowNumber,
+                time: time,
+                isPlaying: engine.isPlaying,
+                chapterTitle: playback.currentChapter?.title,
+                spectrum: playback.spectrum,
+                kind: visualizerKind,
+                lineColor: Color(hex: lineColorHex),
+                onTap: {
+                    Haptics.select()
+                    visualizer = visualizerKind.next.rawValue
+                }
+            )
         }
     }
 
@@ -86,7 +122,7 @@ struct PlayerPanel: View {
         HStack(spacing: 0) {
             roundButton(
                 systemImage: "shuffle",
-                size: 40,
+                size: 40 * big,
                 foreground: playback.shuffleOn ? palette.accent : palette.secondaryText,
                 background: playback.shuffleOn ? palette.rowCurrent : .clear,
                 label: playback.shuffleOn ? "Честный рандом включён" : "Честный рандом выключен"
@@ -94,7 +130,7 @@ struct PlayerPanel: View {
                 playback.toggleShuffle()
             }
             Spacer(minLength: 0)
-            roundButton(systemImage: "backward.end.fill", size: 48, foreground: palette.text, background: palette.button, label: "Предыдущий трек") {
+            roundButton(systemImage: "backward.end.fill", size: 48 * big, foreground: palette.text, background: palette.button, label: "Предыдущий трек") {
                 playback.previous()
             }
             .disabled(!hasTrack)
@@ -103,12 +139,13 @@ struct PlayerPanel: View {
             Spacer(minLength: 0)
 
             Button {
+                Haptics.tap()
                 playback.togglePlayPause()
             } label: {
                 Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.system(size: 30 * big, weight: .bold))
                     .foregroundStyle(palette.onAccent)
-                    .frame(width: 72, height: 72)
+                    .frame(width: 72 * big, height: 72 * big)
                     .background(Circle().fill(palette.accent))
                     .shadow(color: palette.accent.opacity(0.35), radius: 9, y: 4)
             }
@@ -119,14 +156,14 @@ struct PlayerPanel: View {
             Spacer(minLength: 0)
             skipButton(forward: true)
             Spacer(minLength: 0)
-            roundButton(systemImage: "forward.end.fill", size: 48, foreground: palette.text, background: palette.button, label: "Следующий трек") {
+            roundButton(systemImage: "forward.end.fill", size: 48 * big, foreground: palette.text, background: palette.button, label: "Следующий трек") {
                 playback.next()
             }
             .disabled(!hasTrack)
             Spacer(minLength: 0)
             roundButton(
                 systemImage: playback.repeatMode == .one ? "repeat.1" : "repeat",
-                size: 40,
+                size: 40 * big,
                 foreground: playback.repeatMode == .off ? palette.secondaryText : palette.accent,
                 background: playback.repeatMode == .off ? .clear : palette.rowCurrent,
                 label: repeatLabel
@@ -152,7 +189,10 @@ struct PlayerPanel: View {
         label: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
             Image(systemName: systemImage)
                 .font(.system(size: size * 0.42, weight: .semibold))
                 .foregroundStyle(foreground)
@@ -173,12 +213,12 @@ struct PlayerPanel: View {
         } label: {
             VStack(spacing: -2) {
                 Image(systemName: forward ? "arrow.clockwise" : "arrow.counterclockwise")
-                    .font(.system(size: 19, weight: .semibold))
+                    .font(.system(size: 19 * big, weight: .semibold))
                 Text("\(skipInterval)")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10 * big, weight: .bold))
             }
             .foregroundStyle(palette.text)
-            .frame(width: 40, height: 48)
+            .frame(width: 40 * big, height: 48 * big)
         }
         .buttonStyle(PressDarkenStyle())
         .disabled(!hasTrack)
@@ -281,7 +321,10 @@ struct PlayerPanel: View {
     }
 
     private func iconButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
             Image(systemName: systemImage)
                 .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(palette.secondaryText)
@@ -292,52 +335,61 @@ struct PlayerPanel: View {
     }
 }
 
-/// ЖК-дисплей в стиле классических плееров.
+/// ЖК-дисплей в стиле классических плееров (скин «Классика»).
+/// Нажатие переключает вид визуализатора.
 struct LCDDisplay: View {
     let track: TrackRecord?
     let rowNumber: Int?
     let time: Double
     let isPlaying: Bool
     let chapterTitle: String?
+    let spectrum: SpectrumAnalyzer
+    let kind: VisualizerKind
+    let lineColor: Color
+    let onTap: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(rowNumber.map { String(format: "%02d.", $0) } ?? "--.")
-                        .font(.system(size: 15, design: .monospaced))
-                        .foregroundStyle(Palette.lcdDim)
-                    Text(TimeText.format(time))
-                        .font(.system(size: 34, weight: .regular, design: .monospaced))
-                        .foregroundStyle(Palette.lcdText)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(formatLine)
-                    Text(sampleLine)
-                }
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(Palette.lcdDim)
-            }
-            Text(titleLine)
-                .font(.system(size: 15, design: .monospaced))
-                .foregroundStyle(Palette.lcdText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            if let chapterTitle {
-                Text("ГЛАВА: " + chapterTitle)
-                    .font(.system(size: 12, design: .monospaced))
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(rowNumber.map { String(format: "%02d.", $0) } ?? "--.")
+                            .font(.system(size: 15, design: .monospaced))
+                            .foregroundStyle(Palette.lcdDim)
+                        Text(TimeText.format(time))
+                            .font(.system(size: 34, weight: .regular, design: .monospaced))
+                            .foregroundStyle(Palette.lcdText)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(formatLine)
+                        Text(kind.lcdName)
+                    }
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(Palette.lcdDim)
+                }
+                Text(titleLine)
+                    .font(.system(size: 15, design: .monospaced))
+                    .foregroundStyle(Palette.lcdText)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                if let chapterTitle {
+                    Text("ГЛАВА: " + chapterTitle)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(Palette.lcdDim)
+                        .lineLimit(1)
+                }
+                VisualizerView(spectrum: spectrum, kind: kind, isPlaying: isPlaying, lineColor: lineColor)
+                    .frame(height: kind == .needles ? 60 : 32)
             }
-            SpectrumPlaceholder(isPlaying: isPlaying)
-                .frame(height: 30)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Palette.lcdBackground))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Palette.lcdBorder, lineWidth: 1))
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Palette.lcdBackground))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Palette.lcdBorder, lineWidth: 1))
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityHint("Нажмите, чтобы сменить визуализатор")
     }
 
     private var titleLine: String {
@@ -353,41 +405,190 @@ struct LCDDisplay: View {
         }
         return track.formatName
     }
+}
 
-    private var sampleLine: String {
-        guard let track, track.sampleRate > 0 else { return "" }
-        let khz = track.sampleRate / 1000
-        let text = khz.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", khz) : String(format: "%.1f", khz)
-        return "\(text) KHZ"
+/// Обложка трека из кэша (nil — обложки нет).
+@MainActor
+func artworkImage(for track: TrackRecord?) -> UIImage? {
+    guard let track, track.hasArtwork else { return nil }
+    return UIImage(contentsOfFile: ArtworkCache.url(for: track.uid, thumbnail: false).path)
+}
+
+/// Скин Minimalist Modern: размытая обложка на фоне, круглая обложка
+/// с радиальным спектром вокруг.
+struct ModernDisplay: View {
+    let playback: PlaybackController
+    let time: Double
+
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        let image = artworkImage(for: playback.currentTrack)
+        HStack(spacing: 16) {
+            ZStack {
+                TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playback.isPlaying)) { _ in
+                    RadialSpectrum(
+                        bands: playback.isPlaying ? playback.spectrum.snapshot().bands : Array(repeating: 0, count: SpectrumAnalyzer.bandCount),
+                        color: palette.accent,
+                        innerRadius: 44
+                    )
+                }
+                artwork(image)
+                    .frame(width: 88, height: 88)
+                    .clipShape(Circle())
+            }
+            .frame(width: 140, height: 140)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(playback.currentTrack?.displayTitle ?? "PlayMyDisk")
+                    .font(.headline)
+                    .foregroundStyle(palette.text)
+                    .lineLimit(2)
+                Text(playback.currentTrack?.artist ?? "")
+                    .font(.subheadline)
+                    .foregroundStyle(palette.secondaryText)
+                    .lineLimit(1)
+                if let chapter = playback.currentChapter {
+                    Text(chapter.title)
+                        .font(.caption)
+                        .foregroundStyle(palette.secondaryText)
+                        .lineLimit(1)
+                }
+                Text(TimeText.format(time))
+                    .font(.system(size: 28, weight: .light, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(palette.text)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial)
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .blur(radius: 30)
+                        .opacity(0.45)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    @ViewBuilder
+    private func artwork(_ image: UIImage?) -> some View {
+        if let image {
+            Image(uiImage: image).resizable().scaledToFill()
+        } else {
+            ZStack {
+                Circle().fill(palette.button)
+                Image(systemName: "music.note")
+                    .font(.system(size: 30))
+                    .foregroundStyle(palette.accent)
+            }
+        }
     }
 }
 
-/// Анимированные столбики на дисплее. На этапе 6 их заменит настоящий
-/// спектр (FFT) с выбором вида: столбики, стрелки, тонкие линии.
-struct SpectrumPlaceholder: View {
-    let isPlaying: Bool
-    private let bars = 28
+/// Скин Retro: кассета с крутящимися катушками или пластинка + стрелочные приборы.
+struct RetroDisplay: View {
+    let playback: PlaybackController
+    let time: Double
+    let vinyl: Bool
+
+    @Environment(\.palette) private var palette
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 0.12, paused: !isPlaying)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            GeometryReader { geo in
-                HStack(alignment: .bottom, spacing: 3) {
-                    ForEach(0..<bars, id: \.self) { i in
-                        let wave = abs(sin(t * 3.1 + Double(i) * 1.7) * cos(t * 1.3 + Double(i) * 0.4))
-                        let level = isPlaying ? 0.15 + 0.85 * wave : 0.06
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(LinearGradient(
-                                colors: [Color(hex: "#FFD23F"), Palette.lcdText, Color(hex: "#2E9E3E")],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ))
-                            .frame(height: max(2, geo.size.height * level))
+        VStack(spacing: 10) {
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playback.isPlaying)) { context in
+                // Угол поворота зависит от времени и скорости воспроизведения
+                let seconds = context.date.timeIntervalSinceReferenceDate
+                let angle = Angle.radians(playback.isPlaying ? seconds * 2.2 * Double(playback.engine.rate) : 0)
+                if vinyl {
+                    HStack(spacing: 14) {
+                        VinylDisc(angle: angle, accent: palette.accent)
+                            .frame(width: 110, height: 110)
+                        labelBlock
                     }
+                } else {
+                    VStack(spacing: 6) {
+                        HStack(spacing: 40) {
+                            CassetteReel(angle: angle).frame(width: 54, height: 54)
+                            CassetteReel(angle: angle).frame(width: 54, height: 54)
+                        }
+                        labelBlock
+                    }
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: "#3A2A1A")))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "#5A3A1C"), lineWidth: 2))
                 }
-                .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playback.isPlaying)) { _ in
+                let snapshot = playback.isPlaying ? playback.spectrum.snapshot() : SpectrumAnalyzer.Snapshot(bands: [], left: 0, right: 0)
+                HStack(spacing: 10) {
+                    VUMeter(level: snapshot.left, label: "L")
+                    VUMeter(level: snapshot.right, label: "R")
+                }
+                .frame(height: 56)
             }
         }
-        .accessibilityHidden(true)
+    }
+
+    private var labelBlock: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(playback.currentTrack?.displayTitle ?? "PlayMyDisk")
+                .font(.system(size: 15, weight: .semibold, design: .serif))
+                .lineLimit(1)
+            Text(playback.currentTrack?.artist ?? "")
+                .font(.system(size: 13, design: .serif))
+                .lineLimit(1)
+            Text(TimeText.format(time))
+                .font(.system(size: 13, design: .monospaced))
+        }
+        .foregroundStyle(Color(hex: "#1A0E00"))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 4).fill(Color(hex: "#F3E3C3")))
+    }
+}
+
+/// Скин Car Mode: крупное время и название, без мелких деталей.
+struct CarDisplay: View {
+    let playback: PlaybackController
+    let rowNumber: Int?
+    let time: Double
+
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(TimeText.format(time))
+                    .font(.system(size: 52, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(palette.text)
+                Spacer()
+                if let rowNumber {
+                    Text("№ \(rowNumber)")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(palette.secondaryText)
+                }
+            }
+            Text(playback.currentTrack?.displayTitle ?? "PlayMyDisk")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(palette.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(playback.currentTrack?.artist ?? "")
+                .font(.system(size: 20))
+                .foregroundStyle(palette.secondaryText)
+                .lineLimit(1)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 14).fill(palette.button))
     }
 }

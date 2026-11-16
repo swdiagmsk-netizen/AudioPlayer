@@ -119,7 +119,10 @@ struct FileActionsSheet: View {
         action: @escaping () -> Void
     ) -> some View {
         VStack(spacing: 0) {
-            Button(action: action) {
+            Button {
+                Haptics.tap()
+                action()
+            } label: {
                 rowLabel(icon: icon, iconColor: iconColor, title: title, subtitle: subtitle, titleColor: titleColor)
             }
             .buttonStyle(.plain)

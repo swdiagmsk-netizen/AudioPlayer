@@ -51,6 +51,23 @@ enum SettingsKeys {
     /// Скорость для музыки и для аудиокниг (хранятся отдельно).
     static let rateMusic = "state.rate.music"
     static let rateAudiobook = "state.rate.audiobook"
+    /// Скин: "classic", "modern", "retro", "car".
+    static let skin = "settings.skin"
+    /// Вид ретро-скина: "cassette" или "vinyl".
+    static let retroStyle = "settings.retroStyle"
+    /// Визуализатор: "bars", "needles", "lines".
+    static let visualizer = "settings.visualizer"
+    /// Цвет тонких линий визуализатора, hex.
+    static let lineColorHex = "settings.lineColorHex"
+    /// Свой цвет фона и текста, hex ("" — стандартный).
+    static let customBackgroundHex = "settings.customBackgroundHex"
+    static let customTextHex = "settings.customTextHex"
+    /// Вибрация (тактильный отклик).
+    static let haptics = "settings.haptics"
+    /// Разрешать дубликаты.
+    static let allowDuplicates = "settings.allowDuplicates"
+    /// Язык приложения: "en", "ru", "zh-Hant", "ja", "es", "de", "fr".
+    static let appLanguage = "settings.appLanguage"
     /// Последняя открытая вкладка (ListID.key).
     static let lastListKey = "ui.lastListKey"
     /// Последняя открытая папка.
@@ -118,6 +135,9 @@ enum AppSettings {
     static func setRate(_ rate: Float, audiobook: Bool) {
         UserDefaults.standard.set(rate, forKey: audiobook ? SettingsKeys.rateAudiobook : SettingsKeys.rateMusic)
     }
+
+    static var hapticsEnabled: Bool { bool(SettingsKeys.haptics, default: false) }
+    static var allowDuplicates: Bool { bool(SettingsKeys.allowDuplicates, default: true) }
 
     /// true — при запуске продолжать воспроизведение с места остановки.
     static var startContinues: Bool {

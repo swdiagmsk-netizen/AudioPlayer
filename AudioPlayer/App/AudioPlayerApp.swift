@@ -25,6 +25,7 @@ struct AudioPlayerApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
+                container.playback.setVisualizerActive(true)
                 // Вернулись в приложение — файлы могли добавить через «Файлы»
                 if container.didFinishLaunchTasks {
                     Task {
@@ -34,6 +35,9 @@ struct AudioPlayerApp: App {
             case .background, .inactive:
                 // Сохраняем позицию, чтобы продолжить с того же места после закрытия
                 container.playback.saveAll()
+                if newPhase == .background {
+                    container.playback.setVisualizerActive(false)
+                }
             @unknown default:
                 break
             }

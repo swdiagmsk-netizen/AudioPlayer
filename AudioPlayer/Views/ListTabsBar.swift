@@ -103,7 +103,10 @@ struct ListTabsBar: View {
     }
 
     private func chip(_ title: String, accessibility: String, isOn: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            Haptics.select()
+            action()
+        } label: {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)

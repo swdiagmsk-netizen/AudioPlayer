@@ -7,6 +7,8 @@ struct ContentView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(SettingsKeys.accentHex) private var accentHex = Palette.defaultAccentHex
+    @AppStorage(SettingsKeys.customBackgroundHex) private var customBackgroundHex = ""
+    @AppStorage(SettingsKeys.customTextHex) private var customTextHex = ""
     @AppStorage(SettingsKeys.lastListKey) private var lastListKey = ListID.all.key
     @AppStorage(SettingsKeys.lastFolder) private var lastFolder = ""
     @AppStorage(SettingsKeys.rememberFolder) private var rememberFolder = true
@@ -35,7 +37,12 @@ struct ContentView: View {
     @State private var toastTask: Task<Void, Never>?
 
     private var palette: Palette {
-        Palette.make(dark: colorScheme == .dark, accentHex: accentHex)
+        Palette.make(
+            dark: colorScheme == .dark,
+            accentHex: accentHex,
+            backgroundHex: customBackgroundHex,
+            textHex: customTextHex
+        )
     }
 
     private var playback: PlaybackController { container.playback }
