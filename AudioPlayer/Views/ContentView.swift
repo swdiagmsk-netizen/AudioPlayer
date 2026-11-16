@@ -1,305 +1,351 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Временный экран (этапы 1–3): список библиотеки, импорт, управление воспроизведением.
-/// Согласованный дизайн главного экрана появится на этапе 4.
+/// Главный экран: сверху панель плеера, снизу вкладки и список треков.
 struct ContentView: View {
     let container: AppContainer
 
-    @State private var showImporter = false
-    @State private var showLog = false
-    @State private var reportText: String?
-    @State private var isDragging = false
-    @State private var dragValue: Double = 0
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(SettingsKeys.accentHex) private var accentHex = Palette.defaultAccentHex
+    @AppStorage(SettingsKeys.lastListKey) private var lastListKey = ListID.all.key
+    @AppStorage(SettingsKeys.lastFolder) private var lastFolder = ""
+    @AppStorage(SettingsKeys.rememberFolder) private var rememberFolder = true
+    @AppStorage(SettingsKeys.showHitTab) private var showHitTab = true
+    @AppStorage(SettingsKeys.showSuperTab) private var showSuperTab = true
 
-    @AppStorage(SettingsKeys.skipInterval) private var skipInterval: Int = 15
+    @State private var selectedList: ListID = .all
+    @State private var didRestoreList = false
+    @State private var showImporter = false
+    @State private var showSettings = false
+    @State private var menuTarget: MenuTarget?
+    @State private var addTarget: AddTarget?
+    @State private var pendingDelete: [TrackRecord] = []
+    @State private var showNewPlaylist = false
+    @State private var newPlaylistName = ""
+    @State private var playlistToRename: Playlist?
+    @State private var renameText = ""
+    @State private var playlistToDelete: Playlist?
+    @State private var toast: String?
+    @State private var toastTask: Task<Void, Never>?
+
+    private var palette: Palette {
+        Palette.make(dark: colorScheme == .dark, accentHex: accentHex)
+    }
 
     private var playback: PlaybackController { container.playback }
-    private var engine: AudioEngineManager { container.playback.engine }
+    private var lists: QueueAndPlaylistManager { container.lists }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                playerPanel
-                Divider()
-                trackList
+        VStack(spacing: 0) {
+            PlayerPanel(
+                playback: playback,
+                currentRowNumber: currentRowNumber,
+                onImport: { showImporter = true },
+                onSettings: { showSettings = true },
+                onBookmark: addBookmark
+            )
+            ListTabsBar(
+                selected: $selectedList,
+                playlists: lists.playlists,
+                currentFolder: rememberFolder ? lastFolder : "",
+                onCreate: { showNewPlaylist = true },
+                onRename: { playlist in
+                    renameText = playlist.name
+                    playlistToRename = playlist
+                },
+                onDelete: { playlist in
+                    playlistToDelete = playlist
+                },
+                onMove: movePlaylist
+            )
+            TrackListView(
+                container: container,
+                list: selectedList,
+                onOpenFolder: { path in
+                    selectedList = .folder(path)
+                },
+                onMenu: { track, entry in
+                    menuTarget = MenuTarget(track: track, entry: entry)
+                },
+                onRequestDelete: { tracks in
+                    requestDelete(tracks)
+                },
+                onAddToPlaylist: { tracks in
+                    addTarget = AddTarget(tracks: tracks)
+                },
+                onToast: showToast
+            )
+        }
+        .background(palette.background.ignoresSafeArea())
+        .environment(\.palette, palette)
+        .tint(palette.accent)
+        .overlay(alignment: .bottom) {
+            toastView
+        }
+        .onAppear(perform: restoreSelectedList)
+        .onChange(of: selectedList) { _, newValue in
+            lastListKey = newValue.key
+            if case .folder(let path) = newValue {
+                lastFolder = path
             }
-            .navigationTitle("PlayMyDisk")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showLog = true
-                    } label: {
-                        Image(systemName: "doc.text.magnifyingglass")
+        }
+        .onChange(of: showHitTab) { _, visible in
+            if !visible, selectedList == .hitParade { selectedList = .all }
+        }
+        .onChange(of: showSuperTab) { _, visible in
+            if !visible, selectedList == .superList { selectedList = .all }
+        }
+        .onChange(of: lists.playlists.map(\.uid)) { _, uids in
+            // Открытый плейлист удалили — переходим во «Все треки»
+            if case .playlist(let uid) = selectedList, !uids.contains(uid) {
+                selectedList = .all
+            }
+        }
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: AudioFormats.importTypes,
+            allowsMultipleSelection: true
+        ) { result in
+            handleImport(result)
+        }
+        .sheet(item: $menuTarget) { target in
+            FileActionsSheet(
+                track: target.track,
+                entry: target.entry,
+                rowNumber: rowNumber(of: target.track),
+                onToggleSuper: { lists.toggleSuper(target.track) },
+                onAddToPlaylist: {
+                    afterSheetCloses { addTarget = AddTarget(tracks: [target.track]) }
+                },
+                onRemoveFromPlaylist: {
+                    if let entry = target.entry {
+                        lists.remove([entry])
+                        showToast("Убрано из плейлиста")
                     }
-                    .accessibilityLabel("Журнал отладки")
+                },
+                onDelete: {
+                    afterSheetCloses { requestDelete([target.track]) }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showImporter = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                    }
-                    .accessibilityLabel("Добавить файлы")
+            )
+            .environment(\.palette, palette)
+        }
+        .sheet(item: $addTarget) { target in
+            AddToPlaylistSheet(lists: lists, tracks: target.tracks, onDone: showToast)
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView(container: container)
+                .environment(\.palette, palette)
+        }
+        .alert(
+            pendingDelete.count == 1 ? "Удалить файл с устройства?" : "Удалить файлы с устройства?",
+            isPresented: Binding(get: { !pendingDelete.isEmpty }, set: { if !$0 { pendingDelete = [] } })
+        ) {
+            Button("Удалить", role: .destructive) {
+                performDelete()
+            }
+            Button("Отмена", role: .cancel) {
+                pendingDelete = []
+            }
+        } message: {
+            Text(deleteMessage)
+        }
+        .alert("Новый плейлист", isPresented: $showNewPlaylist) {
+            TextField("Название", text: $newPlaylistName)
+            Button("Создать") {
+                if let playlist = lists.createPlaylist(named: newPlaylistName) {
+                    selectedList = .playlist(playlist.uid)
                 }
+                newPlaylistName = ""
             }
-            .fileImporter(
-                isPresented: $showImporter,
-                allowedContentTypes: AudioFormats.importTypes,
-                allowsMultipleSelection: true
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    Task {
-                        let report = await container.library.importFiles(urls)
-                        reportText = describe(report)
-                    }
-                case .failure(let error):
-                    reportText = "Не удалось выбрать файлы: \(error.localizedDescription)"
+            Button("Отмена", role: .cancel) {
+                newPlaylistName = ""
+            }
+        }
+        .alert(
+            "Переименовать плейлист",
+            isPresented: Binding(get: { playlistToRename != nil }, set: { if !$0 { playlistToRename = nil } })
+        ) {
+            TextField("Название", text: $renameText)
+            Button("Сохранить") {
+                if let playlist = playlistToRename {
+                    lists.renamePlaylist(playlist, to: renameText)
                 }
+                playlistToRename = nil
             }
-            .sheet(isPresented: $showLog) {
-                DebugLogView()
+            Button("Отмена", role: .cancel) {
+                playlistToRename = nil
             }
-            .alert(
-                "PlayMyDisk",
-                isPresented: Binding(
-                    get: { reportText != nil || playback.message != nil },
-                    set: { shown in
-                        if !shown {
-                            reportText = nil
-                            playback.message = nil
-                        }
-                    }
-                )
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(reportText ?? playback.message ?? "")
+        }
+        .alert(
+            "Удалить плейлист?",
+            isPresented: Binding(get: { playlistToDelete != nil }, set: { if !$0 { playlistToDelete = nil } }),
+            presenting: playlistToDelete
+        ) { playlist in
+            Button("Удалить", role: .destructive) {
+                lists.deletePlaylist(playlist)
+                playlistToDelete = nil
             }
+            Button("Отмена", role: .cancel) {
+                playlistToDelete = nil
+            }
+        } message: { playlist in
+            Text("Плейлист «\(playlist.name)» будет удалён. Файлы останутся на устройстве.")
+        }
+        .alert(
+            "PlayMyDisk",
+            isPresented: Binding(get: { playback.message != nil }, set: { if !$0 { playback.message = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(playback.message ?? "")
         }
     }
 
-    // MARK: - Панель плеера
+    // MARK: - Вспомогательные типы
 
-    private var playerPanel: some View {
-        VStack(spacing: 10) {
-            VStack(spacing: 2) {
-                Text(playback.currentTrack?.displayTitle ?? "Ничего не играет")
-                    .font(.headline)
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            VStack(spacing: 4) {
-                Slider(
-                    value: Binding(
-                        get: { isDragging ? dragValue : engine.currentTime },
-                        set: { dragValue = $0 }
-                    ),
-                    in: 0...max(engine.duration, 1),
-                    onEditingChanged: { editing in
-                        if editing {
-                            dragValue = engine.currentTime
-                            isDragging = true
-                        } else {
-                            playback.seek(to: dragValue)
-                            isDragging = false
-                        }
-                    }
-                )
-                .disabled(!engine.isLoaded)
-                HStack {
-                    Text(formatTime(isDragging ? dragValue : engine.currentTime))
-                    Spacer()
-                    Text(formatTime(engine.duration))
-                }
-                .font(.caption)
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-            }
-
-            HStack(spacing: 18) {
-                Button { playback.previous() } label: {
-                    Image(systemName: "backward.end.fill").font(.title2)
-                }
-                .accessibilityLabel("Предыдущий трек")
-
-                Button { playback.skipBackward() } label: {
-                    Image(systemName: "gobackward").font(.title2)
-                        .overlay(Text("\(skipInterval)").font(.system(size: 9, weight: .bold)).offset(y: 1))
-                }
-                .accessibilityLabel("Назад на \(skipInterval) секунд")
-
-                Button { playback.togglePlayPause() } label: {
-                    Image(systemName: engine.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 60))
-                }
-                .accessibilityLabel(engine.isPlaying ? "Пауза" : "Играть")
-
-                Button { playback.skipForward() } label: {
-                    Image(systemName: "goforward").font(.title2)
-                        .overlay(Text("\(skipInterval)").font(.system(size: 9, weight: .bold)).offset(y: 1))
-                }
-                .accessibilityLabel("Вперёд на \(skipInterval) секунд")
-
-                Button { playback.next() } label: {
-                    Image(systemName: "forward.end.fill").font(.title2)
-                }
-                .accessibilityLabel("Следующий трек")
-            }
-            .disabled(playback.currentTrack == nil)
-
-            HStack(spacing: 28) {
-                Button { playback.toggleShuffle() } label: {
-                    Image(systemName: "shuffle")
-                        .foregroundStyle(playback.shuffleOn ? Color.orange : Color.secondary)
-                }
-                .accessibilityLabel("Честный рандом")
-
-                Button { playback.cycleRepeat() } label: {
-                    Image(systemName: playback.repeatMode == .one ? "repeat.1" : "repeat")
-                        .foregroundStyle(playback.repeatMode == .off ? Color.secondary : Color.orange)
-                }
-                .accessibilityLabel("Повтор")
-
-                Button { container.lists.shuffleList(.all) } label: {
-                    Image(systemName: "arrow.triangle.swap")
-                }
-                .accessibilityLabel("Перемешать список")
-
-                Button { container.lists.sortAlphabetically(.all) } label: {
-                    Image(systemName: "textformat.abc")
-                }
-                .accessibilityLabel("По алфавиту")
-            }
-            .font(.title3)
-
-            Menu {
-                ForEach(PlaybackSpeed.all, id: \.self) { rate in
-                    Button(PlaybackSpeed.label(rate)) {
-                        playback.setRate(rate)
-                    }
-                }
-            } label: {
-                Text(PlaybackSpeed.label(engine.rate))
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .overlay(Capsule().stroke(.secondary.opacity(0.5)))
-            } primaryAction: {
-                playback.setRate(PlaybackSpeed.next(after: engine.rate))
-            }
-            .accessibilityLabel("Скорость воспроизведения")
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+    struct MenuTarget: Identifiable {
+        let id = UUID()
+        let track: TrackRecord
+        let entry: PlaylistEntry?
     }
 
-    private var subtitle: String {
-        let library = container.library
-        if library.isBusy, !library.progressText.isEmpty { return library.progressText }
-        if let track = playback.currentTrack {
-            return track.artist.isEmpty ? "Неизвестный исполнитель" : track.artist
-        }
-        return "Треков в библиотеке: \(library.tracks.count)"
+    struct AddTarget: Identifiable {
+        let id = UUID()
+        let tracks: [TrackRecord]
     }
 
-    // MARK: - Список
+    // MARK: - Номера строк
 
-    private var trackList: some View {
-        let tracks = container.lists.tracks(for: .all)
-        return Group {
-            if tracks.isEmpty {
-                ContentUnavailableView(
-                    "Библиотека пуста",
-                    systemImage: "music.note.list",
-                    description: Text("Нажмите + вверху, чтобы добавить музыку")
-                )
-            } else {
-                List {
-                    ForEach(Array(tracks.enumerated()), id: \.element.uid) { index, track in
-                        Button {
-                            playback.play(items: tracks.map(\.uid), startUID: track.uid, contextKey: ListID.all.key)
-                        } label: {
-                            row(index: index, track: track)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowBackground(
-                            track.uid == playback.currentTrack?.uid ? Color.orange.opacity(0.15) : Color.clear
-                        )
-                    }
-                }
-                .listStyle(.plain)
-                .refreshable {
-                    await container.library.rescan()
-                }
-            }
+    private func rowNumber(of track: TrackRecord) -> Int? {
+        lists.tracks(for: selectedList).firstIndex(where: { $0.uid == track.uid }).map { $0 + 1 }
+    }
+
+    private var currentRowNumber: Int? {
+        guard let track = playback.currentTrack else { return nil }
+        return rowNumber(of: track)
+    }
+
+    // MARK: - Действия
+
+    private func restoreSelectedList() {
+        guard !didRestoreList else { return }
+        didRestoreList = true
+        guard let saved = ListID(key: lastListKey) else { return }
+        switch saved {
+        case .folder:
+            selectedList = .folder(rememberFolder ? lastFolder : "")
+        case .playlist(let uid):
+            selectedList = lists.playlist(withUID: uid) != nil ? saved : .all
+        case .hitParade:
+            selectedList = showHitTab ? saved : .all
+        case .superList:
+            selectedList = showSuperTab ? saved : .all
+        case .all:
+            selectedList = .all
         }
     }
 
-    private func row(index: Int, track: TrackRecord) -> some View {
-        HStack(spacing: 12) {
-            Text(String(format: "%02d", index + 1))
-                .font(.system(.subheadline, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .frame(width: 34, alignment: .trailing)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(track.displayTitle)
-                    .lineLimit(1)
-                Text(track.artist.isEmpty ? "Неизвестный исполнитель" : track.artist)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer()
-            if track.isProtected {
-                Image(systemName: "lock.fill")
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel("Защищённый файл")
-            }
-            if track.playCount > 0 {
-                Text("▶ \(track.playCount)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            Text(formatTime(track.duration))
-                .font(.footnote)
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-        }
-        .contentShape(Rectangle())
+    private func movePlaylist(_ uid: UUID, onto target: UUID) {
+        guard let from = lists.playlists.firstIndex(where: { $0.uid == uid }),
+              let to = lists.playlists.firstIndex(where: { $0.uid == target }) else { return }
+        let destination = to > from ? to + 1 : to
+        lists.movePlaylists(fromOffsets: IndexSet(integer: from), toOffset: destination)
     }
 
-    // MARK: - Вспомогательное
+    private func addBookmark() {
+        guard let track = playback.currentTrack else { return }
+        let time = playback.engine.computeCurrentTime()
+        container.library.addBookmark(to: track, time: time, note: "")
+        showToast("Закладка на \(TimeText.format(time))")
+    }
+
+    private func handleImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            var folder = ""
+            if case .folder(let path) = selectedList { folder = path }
+            Task {
+                let report = await container.library.importFiles(urls, intoFolder: folder)
+                if let text = describe(report) {
+                    showToast(text)
+                }
+            }
+        case .failure(let error):
+            showToast("Не удалось выбрать файлы: \(error.localizedDescription)")
+        }
+    }
 
     private func describe(_ report: ImportReport) -> String? {
         if report.isEmpty { return nil }
-        var lines: [String] = []
-        lines.append("Добавлено: \(report.added.count)")
-        if !report.skipped.isEmpty {
-            lines.append("Пропущено (формат не поддерживается): \(report.skipped.count)")
-        }
-        if !report.failed.isEmpty {
-            lines.append("Ошибки: \(report.failed.count)")
-            lines.append(contentsOf: report.failed.prefix(5))
-        }
-        return lines.joined(separator: "\n")
+        var parts = ["Добавлено: \(report.added.count)"]
+        if !report.skipped.isEmpty { parts.append("пропущено: \(report.skipped.count)") }
+        if !report.failed.isEmpty { parts.append("ошибок: \(report.failed.count)") }
+        return parts.joined(separator: ", ")
     }
 
-    private func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite, seconds >= 0 else { return "--:--" }
-        let total = Int(seconds.rounded(.down))
-        let h = total / 3600
-        let m = (total % 3600) / 60
-        let s = total % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
+    // MARK: - Удаление
+
+    private func requestDelete(_ tracks: [TrackRecord]) {
+        guard !tracks.isEmpty else { return }
+        pendingDelete = tracks
+    }
+
+    private var deleteMessage: String {
+        if pendingDelete.count == 1, let track = pendingDelete.first {
+            let artist = track.artist.isEmpty ? "" : track.artist + " — "
+            return "«\(artist)\(track.displayTitle)» будет удалён с iPhone и из всех плейлистов. Закладки и счётчик прослушиваний тоже удалятся. Отменить нельзя."
         }
-        return String(format: "%d:%02d", m, s)
+        return "Файлов: \(pendingDelete.count). Они будут удалены с iPhone и из всех плейлистов вместе с закладками и счётчиками. Отменить нельзя."
+    }
+
+    private func performDelete() {
+        let tracks = pendingDelete
+        pendingDelete = []
+        var deleted = 0
+        for track in tracks {
+            playback.handleDeleted(uid: track.uid)
+            if container.library.deleteFromDevice(track) {
+                deleted += 1
+            }
+        }
+        showToast(deleted == tracks.count ? "Удалено: \(deleted)" : "Удалено \(deleted) из \(tracks.count), подробности в журнале")
+    }
+
+    /// Следующее окно открываем после закрытия текущего листа.
+    private func afterSheetCloses(_ action: @escaping @MainActor () -> Void) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            action()
+        }
+    }
+
+    // MARK: - Всплывающая подсказка
+
+    private func showToast(_ text: String) {
+        toastTask?.cancel()
+        withAnimation { toast = text }
+        toastTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.2))
+            guard !Task.isCancelled else { return }
+            withAnimation { toast = nil }
+        }
+    }
+
+    @ViewBuilder
+    private var toastView: some View {
+        if let toast {
+            Text(toast)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(palette.text)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Capsule().fill(palette.panel).shadow(color: .black.opacity(0.3), radius: 8, y: 3))
+                .overlay(Capsule().stroke(palette.line, lineWidth: 1))
+                .padding(.bottom, 24)
+                .padding(.horizontal, 24)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .accessibilityAddTraits(.isStaticText)
+        }
     }
 }

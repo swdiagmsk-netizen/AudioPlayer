@@ -5,10 +5,12 @@ import SwiftUI
 struct AudioPlayerApp: App {
     @State private var container = AppContainer()
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(SettingsKeys.themeMode) private var themeMode = "auto"
 
     var body: some Scene {
         WindowGroup {
             ContentView(container: container)
+                .preferredColorScheme(themeMode == "light" ? .light : (themeMode == "dark" ? .dark : nil))
                 .task {
                     // Сканирование библиотеки и продолжение с места остановки
                     await container.runLaunchTasks()
