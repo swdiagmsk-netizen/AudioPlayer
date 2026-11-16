@@ -265,8 +265,34 @@ final class QueueAndPlaylistManager {
     }
 
     /// Добавляет треки в плейлист: в начало или в конец — по настройке.
-    func add(_ tracks: [TrackRecord], to playlist: Playlist) {
-        guard !tracks.isEmpty else { return }
+    /// Если дубликаты запрещены — повторы не добавляются и возвращаются списком.
+    @discardableResult
+    func add(_ tracks: [TrackRecord], to playlist: Playlist) -> [DuplicateInfo] {
+        guard !tracks.isEmpty else { return [] }
+        var toAdd: [TrackRecord] = []
+        var duplicates: [DuplicateInfo] = []
+        if AppSettings.allowDuplicates {
+            toAdd = tracks
+        } else {
+            var present = playlist.entries.compactMap { $0.track }
+            for track in tracks {
+                if let existing = present.first(where: { $0.uid == track.uid || library.isDuplicate(track, $0) }) {
+                    duplicates.append(DuplicateInfo(
+                        title: existing.displayTitle,
+                        artist: existing.artist,
+                        existingUID: existing.uid,
+                        listKey: ListID.playlist(playlist.uid).key,
+                        listName: playlist.name
+                    ))
+                } else {
+                    toAdd.append(track)
+                    present.append(track)
+                }
+            }
+        }
+        defer { commit("addToPlaylist") }
+        guard !toAdd.isEmpty else { return duplicates }
+        let tracks = toAdd
         let indexes = playlist.entries.map { $0.orderIndex }
         var nextIndex: Int
         if AppSettings.insertNewAtStart {
@@ -281,7 +307,33 @@ final class QueueAndPlaylistManager {
             entry.track = track
             nextIndex += 1
         }
-        commit("addToPlaylist")
+        return duplicates
+    }
+
+    /// Убирает повторы из всех плейлистов: в каждой группе дубликатов
+    /// в плейлисте остаётся одна строка (предпочтительно — трек `keeper`).
+    /// Возвращает число убранных строк. Файлы с устройства не удаляются.
+    @discardableResult
+    func removeDuplicatesFromPlaylists(groups: [[TrackRecord]], keepers: [UUID]) -> Int {
+        var removed = 0
+        for playlist in playlists {
+            for (groupIndex, group) in groups.enumerated() {
+                let ids = Set(group.map(\.uid))
+                let entries = playlist.entries.filter { entry in
+                    guard let uid = entry.track?.uid else { return false }
+                    return ids.contains(uid)
+                }
+                guard entries.count > 1 else { continue }
+                let keeperUID = keepers.indices.contains(groupIndex) ? keepers[groupIndex] : group[0].uid
+                let keep = entries.first(where: { $0.track?.uid == keeperUID }) ?? entries.sorted { $0.orderIndex < $1.orderIndex }[0]
+                for entry in entries where entry.uid != keep.uid {
+                    context.delete(entry)
+                    removed += 1
+                }
+            }
+        }
+        commit("dedupe")
+        return removed
     }
 
     /// Убирает строки из плейлиста. Файлы остаются на устройстве.

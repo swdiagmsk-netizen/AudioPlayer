@@ -64,6 +64,11 @@ enum ArtworkCache {
         try? FileManager.default.removeItem(at: directory)
     }
 
+    /// JPEG не больше `maxPixel` по длинной стороне (для записи обложки в файл).
+    static func jpegData(from data: Data, maxPixel: Int) -> Data? {
+        downscaledJPEG(from: data, maxPixel: maxPixel)
+    }
+
     // MARK: - Уменьшение картинки (ImageIO, можно вызывать с любого потока)
 
     private static func downscaledJPEG(from data: Data, maxPixel: Int) -> Data? {

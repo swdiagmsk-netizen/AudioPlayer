@@ -204,6 +204,26 @@ final class LibraryAndBookmarkManager {
         }
         progressText = ""
         await rescan()
+
+        // Дубликаты запрещены: новый файл, который повторяет уже существующий, удаляем
+        if !AppSettings.allowDuplicates, !report.added.isEmpty {
+            let addedPaths = Set(report.added.map { LibraryPaths.join(folder, $0) })
+            let newTracks = tracks.filter { addedPaths.contains($0.relativePath) }
+            let oldTracks = tracks.filter { !addedPaths.contains($0.relativePath) }
+            for newTrack in newTracks {
+                guard let existing = oldTracks.first(where: { isDuplicate(newTrack, $0) }) else { continue }
+                report.duplicates.append(DuplicateInfo(
+                    title: existing.displayTitle,
+                    artist: existing.artist,
+                    existingUID: existing.uid,
+                    listKey: "all",
+                    listName: "Все треки"
+                ))
+                report.added.removeAll { $0 == newTrack.fileName }
+                deleteFromDevice(newTrack)
+            }
+        }
+
         if !report.isEmpty {
             AppLogger.shared.log(
                 "import",
@@ -313,6 +333,76 @@ final class LibraryAndBookmarkManager {
         }
         await rescan()
         return true
+    }
+
+    // MARK: - Дубликаты
+
+    /// Дубликат: тот же файл по содержимому, или те же исполнитель и название
+    /// при разнице длительности не больше ±2 секунд.
+    func isDuplicate(_ a: TrackRecord, _ b: TrackRecord) -> Bool {
+        if a.uid == b.uid { return false }
+        if !a.fingerprint.isEmpty && a.fingerprint == b.fingerprint { return true }
+        let titleA = normalized(a.displayTitle)
+        let titleB = normalized(b.displayTitle)
+        guard !titleA.isEmpty, titleA == titleB else { return false }
+        guard normalized(a.artist) == normalized(b.artist) else { return false }
+        return abs(a.duration - b.duration) <= 2
+    }
+
+    /// Группы дубликатов во всей библиотеке (в группе — 2 и больше треков).
+    func duplicateGroups() -> [[TrackRecord]] {
+        var groups: [[TrackRecord]] = []
+        var used = Set<UUID>()
+        for track in tracks where !used.contains(track.uid) {
+            let group = [track] + tracks.filter { other in
+                !used.contains(other.uid) && isDuplicate(track, other)
+            }
+            if group.count > 1 {
+                groups.append(group)
+                group.forEach { used.insert($0.uid) }
+            }
+        }
+        return groups
+    }
+
+    private func normalized(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    // MARK: - Теги
+
+    /// Обновляет теги в базе после редактирования.
+    func applyTags(_ tags: TagValues, to track: TrackRecord) {
+        track.title = tags.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.artist = tags.artist.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.album = tags.album.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.albumArtist = tags.albumArtist.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.genre = tags.genre.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.year = tags.year.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.trackNumber = tags.trackNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.composer = tags.composer.trimmingCharacters(in: .whitespacesAndNewlines)
+        track.comment = tags.comment.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Файл изменился — обновляем отпечаток и размер
+        if let fingerprint = FileFingerprint.compute(url: track.fileURL) {
+            track.fingerprint = fingerprint
+        }
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: track.fileURL.path),
+           let size = attrs[.size] as? NSNumber {
+            track.fileSize = size.int64Value
+        }
+        saveContext("tags")
+        reloadTracks()
+    }
+
+    /// Меняет обложку в кэше (nil — удалить).
+    func setArtwork(_ data: Data?, for track: TrackRecord) {
+        if let data {
+            track.hasArtwork = ArtworkCache.store(imageData: data, for: track.uid)
+        } else {
+            ArtworkCache.remove(for: track.uid)
+            track.hasArtwork = false
+        }
+        saveContext("artwork")
     }
 
     // MARK: - Аудиокниги

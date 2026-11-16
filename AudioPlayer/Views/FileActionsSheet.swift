@@ -7,6 +7,8 @@ struct FileActionsSheet: View {
     let entry: PlaylistEntry?
     let rowNumber: Int?
     let onToggleSuper: () -> Void
+    let onEditTags: () -> Void
+    let onMail: () -> Void
     let onAddToPlaylist: () -> Void
     let onRemoveFromPlaylist: () -> Void
     let onDelete: () -> Void
@@ -29,12 +31,22 @@ struct FileActionsSheet: View {
                         onToggleSuper()
                     }
 
+                    actionRow(icon: "pencil", iconColor: palette.text, title: "Изменить теги и имя файла") {
+                        dismiss()
+                        onEditTags()
+                    }
+
+                    actionRow(icon: "envelope", iconColor: palette.text, title: "Отправить по почте", subtitle: "Файл во вложении") {
+                        dismiss()
+                        onMail()
+                    }
+
                     ShareLink(item: track.fileURL) {
                         rowLabel(
                             icon: "square.and.arrow.up",
                             iconColor: palette.text,
                             title: "Поделиться файлом",
-                            subtitle: "Почта, AirDrop, мессенджеры и другое"
+                            subtitle: "AirDrop на другое устройство, мессенджеры и другое"
                         )
                     }
                     .buttonStyle(.plain)
@@ -160,6 +172,7 @@ struct AddToPlaylistSheet: View {
     let lists: QueueAndPlaylistManager
     let tracks: [TrackRecord]
     let onDone: (String) -> Void
+    let onDuplicates: ([DuplicateInfo]) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var newName = ""
@@ -202,8 +215,15 @@ struct AddToPlaylistSheet: View {
     }
 
     private func add(to playlist: Playlist) {
-        lists.add(tracks, to: playlist)
-        onDone("Добавлено в «\(playlist.name)»: \(tracks.count)")
+        Haptics.tap()
+        let duplicates = lists.add(tracks, to: playlist)
+        let added = tracks.count - duplicates.count
+        if added > 0 {
+            onDone("Добавлено в «\(playlist.name)»: \(added)")
+        }
         dismiss()
+        if !duplicates.isEmpty {
+            onDuplicates(duplicates)
+        }
     }
 }

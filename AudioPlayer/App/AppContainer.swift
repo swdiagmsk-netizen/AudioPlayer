@@ -12,6 +12,7 @@ final class AppContainer {
     let lists: QueueAndPlaylistManager
     let playback: PlaybackController
     let equalizer: EqualizerManager
+    let wifi: WiFiTransferController
 
     /// Первое сканирование и восстановление состояния уже выполнены.
     private(set) var didFinishLaunchTasks = false
@@ -44,6 +45,7 @@ final class AppContainer {
         library = LibraryAndBookmarkManager(context: container.mainContext)
         lists = QueueAndPlaylistManager(context: container.mainContext, library: library)
         equalizer = EqualizerManager(context: container.mainContext)
+        wifi = WiFiTransferController(library: library)
         playback = PlaybackController(library: library)
         playback.setUp()
         equalizer.onChange = { [weak playback, weak equalizer] in

@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import MessageUI
 
 /// Главный экран: сверху панель плеера, снизу вкладки и список треков.
 struct ContentView: View {
@@ -34,6 +35,10 @@ struct ContentView: View {
     @State private var showChapters = false
     @State private var bookmarkForNote: Bookmark?
     @State private var bookmarkNote = ""
+    @State private var tagTarget: TrackRecord?
+    @State private var mailTarget: TrackRecord?
+    @State private var duplicateNotice: [DuplicateInfo] = []
+    @State private var focusUID: UUID?
     @State private var toastTask: Task<Void, Never>?
 
     private var palette: Palette {
@@ -78,6 +83,7 @@ struct ContentView: View {
             TrackListView(
                 container: container,
                 list: selectedList,
+                focusUID: $focusUID,
                 onOpenFolder: { path in
                     selectedList = .folder(path)
                 },
@@ -131,6 +137,12 @@ struct ContentView: View {
                 entry: target.entry,
                 rowNumber: rowNumber(of: target.track),
                 onToggleSuper: { lists.toggleSuper(target.track) },
+                onEditTags: {
+                    afterSheetCloses { tagTarget = target.track }
+                },
+                onMail: {
+                    afterSheetCloses { mailFile(target.track) }
+                },
                 onAddToPlaylist: {
                     afterSheetCloses { addTarget = AddTarget(tracks: [target.track]) }
                 },
@@ -147,7 +159,36 @@ struct ContentView: View {
             .environment(\.palette, palette)
         }
         .sheet(item: $addTarget) { target in
-            AddToPlaylistSheet(lists: lists, tracks: target.tracks, onDone: showToast)
+            AddToPlaylistSheet(lists: lists, tracks: target.tracks, onDone: showToast, onDuplicates: { duplicates in
+                afterSheetCloses { duplicateNotice = duplicates }
+            })
+        }
+        .sheet(item: $tagTarget) { track in
+            TagEditorView(container: container, track: track, onDone: showToast)
+                .environment(\.palette, palette)
+        }
+        .sheet(item: $mailTarget) { track in
+            MailComposeView(
+                recipient: "",
+                subject: track.displayTitle,
+                body: "",
+                attachment: mailAttachment(for: track)
+            )
+            .ignoresSafeArea()
+        }
+        .alert(
+            "Такая композиция уже есть",
+            isPresented: Binding(get: { !duplicateNotice.isEmpty }, set: { if !$0 { duplicateNotice = [] } })
+        ) {
+            Button("Понятно", role: .cancel) {
+                duplicateNotice = []
+            }
+            Button("Показать в списке") {
+                showDuplicate(duplicateNotice.first)
+                duplicateNotice = []
+            }
+        } message: {
+            Text(duplicateMessage)
         }
         .sheet(isPresented: $showEqualizer) {
             EqualizerView(equalizer: container.equalizer)
@@ -321,10 +362,62 @@ struct ContentView: View {
                 if let text = describe(report) {
                     showToast(text)
                 }
+                if !report.duplicates.isEmpty {
+                    duplicateNotice = report.duplicates
+                }
             }
         case .failure(let error):
             showToast("Не удалось выбрать файлы: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Дубликаты и почта
+
+    private var duplicateMessage: String {
+        guard let first = duplicateNotice.first else { return "" }
+        let list = ListID(key: first.listKey) ?? .all
+        let number = lists.tracks(for: list).firstIndex(where: { $0.uid == first.existingUID }).map { "Строка \($0 + 1): " } ?? ""
+        let artist = first.artist.isEmpty ? "" : " — \(first.artist)"
+        var text = "\(number)«\(first.title)»\(artist)\nСписок: «\(first.listName)»."
+        if duplicateNotice.count > 1 {
+            text += "\nИ ещё повторов: \(duplicateNotice.count - 1)."
+        }
+        text += "\nПовтор не добавлен."
+        return text
+    }
+
+    private func showDuplicate(_ info: DuplicateInfo?) {
+        guard let info else { return }
+        selectedList = ListID(key: info.listKey) ?? .all
+        focusUID = info.existingUID
+    }
+
+    /// Письмо с файлом во вложении. Очень большие файлы и ненастроенная почта —
+    /// подсказка воспользоваться «Поделиться».
+    private func mailFile(_ track: TrackRecord) {
+        guard MFMailComposeViewController.canSendMail() else {
+            showToast("Почта на iPhone не настроена — используйте «Поделиться файлом»")
+            return
+        }
+        guard track.fileSize <= 100_000_000 else {
+            showToast("Файл больше 100 МБ — используйте «Поделиться файлом» (AirDrop)")
+            return
+        }
+        mailTarget = track
+    }
+
+    private func mailAttachment(for track: TrackRecord) -> (data: Data, mimeType: String, fileName: String)? {
+        guard let data = try? Data(contentsOf: track.fileURL) else { return nil }
+        let mime: String
+        switch (track.fileName as NSString).pathExtension.lowercased() {
+        case "mp3": mime = "audio/mpeg"
+        case "m4a", "m4b", "m4r", "aac": mime = "audio/mp4"
+        case "flac": mime = "audio/flac"
+        case "wav": mime = "audio/wav"
+        case "aiff", "aif", "aifc": mime = "audio/aiff"
+        default: mime = "application/octet-stream"
+        }
+        return (data, mime, track.fileName)
     }
 
     private func describe(_ report: ImportReport) -> String? {

@@ -8,6 +8,8 @@ import SwiftUI
 struct TrackListView: View {
     let container: AppContainer
     let list: ListID
+    /// Показать трек: прокрутить к нему, поставить в центр и подсветить.
+    @Binding var focusUID: UUID?
     let onOpenFolder: (String) -> Void
     let onMenu: (TrackRecord, PlaylistEntry?) -> Void
     let onRequestDelete: ([TrackRecord]) -> Void
@@ -26,6 +28,7 @@ struct TrackListView: View {
     @State private var newFolderName = ""
     @State private var folderToDelete: String?
     @FocusState private var searchFocused: Bool
+    @State private var flashRowID: UUID?
 
     private var lists: QueueAndPlaylistManager { container.lists }
     private var playback: PlaybackController { container.playback }
@@ -100,7 +103,7 @@ struct TrackListView: View {
                         folderRow(name)
                     }
                     ForEach(rows) { item in
-                        row(item, isFound: item.id == foundID)
+                        row(item, isFound: item.id == foundID || item.id == flashRowID)
                             .id(item.id)
                     }
                     .onMove(perform: moveAction)
@@ -155,6 +158,21 @@ struct TrackListView: View {
                     let index = currentFound[min(newValue, currentFound.count - 1)]
                     withAnimation(.easeInOut(duration: 0.25)) {
                         proxy.scrollTo(currentRows[index].id, anchor: .center)
+                    }
+                }
+                .onChange(of: focusUID) { _, uid in
+                    guard let uid else { return }
+                    focusUID = nil
+                    query = ""
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(300))
+                        guard let row = self.rows.first(where: { $0.track.uid == uid }) else { return }
+                        flashRowID = row.id
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(row.id, anchor: .center)
+                        }
+                        try? await Task.sleep(for: .seconds(2.5))
+                        if flashRowID == row.id { flashRowID = nil }
                     }
                 }
                 .onChange(of: rows.map(\.track.uid)) { _, newValue in

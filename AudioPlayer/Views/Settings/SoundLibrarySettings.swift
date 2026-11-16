@@ -186,6 +186,17 @@ struct LibrarySettingsView: View {
 
             Section {
                 Toggle("Разрешать дубликаты", isOn: $allowDuplicates.withHaptic())
+                NavigationLink {
+                    DuplicatesView(container: container)
+                        .onAppear { Haptics.select() }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Найти и убрать дубликаты")
+                        Text("Только из плейлистов. С iPhone — лишь после подтверждения")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } footer: {
                 Text("Если выключено — при добавлении такой же композиции появится уведомление с номером строки, и повтор не добавится.")
             }
@@ -196,6 +207,10 @@ struct LibrarySettingsView: View {
                     Text("В начало").tag(true)
                 }
                 Toggle("Запоминать последнюю папку", isOn: $rememberFolder.withHaptic())
+                NavigationLink("Wi-Fi-импорт с компьютера") {
+                    WiFiTransferView(controller: container.wifi)
+                        .onAppear { Haptics.select() }
+                }
             }
 
             Section("Найти в интернете") {
