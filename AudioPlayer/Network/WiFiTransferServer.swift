@@ -126,7 +126,8 @@ final class WiFiTransferServer: @unchecked Sendable {
                 if name == "en0" {
                     var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
                     if getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                        address = String(cString: host)
+                        let bytes = host.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+                        address = String(decoding: bytes, as: UTF8.self)
                     }
                 }
             }

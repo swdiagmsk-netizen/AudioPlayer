@@ -64,7 +64,8 @@ struct ContentView: View {
                 onBookmarksList: { showBookmarks = true },
                 onEqualizer: { showEqualizer = true },
                 onSleepTimer: { showSleepTimer = true },
-                onChapters: { showChapters = true }
+                onChapters: { showChapters = true },
+                onRecognize: { container.recognition.start() }
             )
             ListTabsBar(
                 selected: $selectedList,
@@ -192,6 +193,13 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showEqualizer) {
             EqualizerView(equalizer: container.equalizer)
+                .environment(\.palette, palette)
+        }
+        .sheet(isPresented: Binding(
+            get: { container.recognition.isPresented },
+            set: { if !$0 { container.recognition.close() } }
+        )) {
+            RecognitionSheet(controller: container.recognition)
                 .environment(\.palette, palette)
         }
         .sheet(isPresented: $showSleepTimer) {

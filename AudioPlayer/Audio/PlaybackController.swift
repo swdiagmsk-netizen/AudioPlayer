@@ -171,6 +171,11 @@ final class PlaybackController {
         saveState()
     }
 
+    /// Возвращает аудиосессию в режим воспроизведения (после распознавания по микрофону).
+    func restoreAudioSession() {
+        session.activate(spokenAudio: currentIsAudiobook)
+    }
+
     func togglePlayPause() {
         if engine.isPlaying {
             pause()

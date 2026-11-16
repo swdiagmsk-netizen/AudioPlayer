@@ -13,6 +13,7 @@ final class AppContainer {
     let playback: PlaybackController
     let equalizer: EqualizerManager
     let wifi: WiFiTransferController
+    let recognition: RecognitionController
 
     /// Первое сканирование и восстановление состояния уже выполнены.
     private(set) var didFinishLaunchTasks = false
@@ -48,6 +49,7 @@ final class AppContainer {
         wifi = WiFiTransferController(library: library)
         playback = PlaybackController(library: library)
         playback.setUp()
+        recognition = RecognitionController(playback: playback)
         equalizer.onChange = { [weak playback, weak equalizer] in
             guard let playback, let equalizer else { return }
             playback.engine.applyEQ(enabled: equalizer.isEnabled, gains: equalizer.gains, preamp: equalizer.preamp)

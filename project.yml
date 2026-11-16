@@ -32,6 +32,9 @@ targets:
         LSSupportsOpeningDocumentsInPlace: true
         ITSAppUsesNonExemptEncryption: false
         NSLocalNetworkUsageDescription: Доступ к локальной сети нужен, чтобы принимать музыку с компьютера по Wi-Fi.
+        NSMicrophoneUsageDescription: Микрофон нужен, чтобы распознать песню, которая звучит рядом.
+        LSApplicationQueriesSchemes:
+          - shazam
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

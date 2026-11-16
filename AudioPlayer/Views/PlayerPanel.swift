@@ -13,6 +13,7 @@ struct PlayerPanel: View {
     let onEqualizer: () -> Void
     let onSleepTimer: () -> Void
     let onChapters: () -> Void
+    let onRecognize: () -> Void
 
     @Environment(\.palette) private var palette
     @AppStorage(SettingsKeys.skipInterval) private var skipInterval: Int = 15
@@ -281,6 +282,8 @@ struct PlayerPanel: View {
                 Spacer(minLength: 0)
                 iconButton("list.number", label: "Главы", action: onChapters)
             }
+            Spacer(minLength: 0)
+            iconButton(RecognizeIcon.name, label: "Распознать песню", action: onRecognize)
             Spacer(minLength: 0)
             iconButton("plus.circle", label: "Добавить файлы", action: onImport)
             Spacer(minLength: 0)
