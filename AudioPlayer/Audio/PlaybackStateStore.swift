@@ -2,23 +2,21 @@ import Foundation
 
 /// Что сохраняется при закрытии, чтобы продолжить с того же места.
 struct SavedPlaybackState: Codable, Sendable {
-    /// Очередь — стабильные ID треков.
-    var queue: [UUID]
-    /// Номер текущего трека в очереди.
-    var index: Int
+    /// Очередь с режимами повтора и рандома.
+    var queue: PlaybackQueue
     /// Позиция в секундах.
     var position: Double
     /// Скорость воспроизведения.
     var rate: Float
     /// Играла ли музыка в момент сохранения.
     var wasPlaying: Bool
-    /// Ключ открытого списка (вкладка, плейлист, папка) — для этапа 4.
+    /// Ключ открытого списка (вкладка, плейлист, папка).
     var contextKey: String?
 }
 
 /// Хранение состояния воспроизведения в UserDefaults (JSON).
 enum PlaybackStateStore {
-    private static let key = "playback.savedState"
+    private static let key = "playback.savedState.v2"
 
     static func save(_ state: SavedPlaybackState) {
         do {

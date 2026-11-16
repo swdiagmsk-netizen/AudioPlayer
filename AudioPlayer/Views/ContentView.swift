@@ -154,6 +154,31 @@ struct ContentView: View {
             }
             .disabled(playback.currentTrack == nil)
 
+            HStack(spacing: 28) {
+                Button { playback.toggleShuffle() } label: {
+                    Image(systemName: "shuffle")
+                        .foregroundStyle(playback.shuffleOn ? Color.orange : Color.secondary)
+                }
+                .accessibilityLabel("Честный рандом")
+
+                Button { playback.cycleRepeat() } label: {
+                    Image(systemName: playback.repeatMode == .one ? "repeat.1" : "repeat")
+                        .foregroundStyle(playback.repeatMode == .off ? Color.secondary : Color.orange)
+                }
+                .accessibilityLabel("Повтор")
+
+                Button { container.lists.shuffleList(.all) } label: {
+                    Image(systemName: "arrow.triangle.swap")
+                }
+                .accessibilityLabel("Перемешать список")
+
+                Button { container.lists.sortAlphabetically(.all) } label: {
+                    Image(systemName: "textformat.abc")
+                }
+                .accessibilityLabel("По алфавиту")
+            }
+            .font(.title3)
+
             Menu {
                 ForEach(PlaybackSpeed.all, id: \.self) { rate in
                     Button(PlaybackSpeed.label(rate)) {
@@ -187,7 +212,7 @@ struct ContentView: View {
     // MARK: - Список
 
     private var trackList: some View {
-        let tracks = container.library.tracks
+        let tracks = container.lists.tracks(for: .all)
         return Group {
             if tracks.isEmpty {
                 ContentUnavailableView(
@@ -199,7 +224,7 @@ struct ContentView: View {
                 List {
                     ForEach(Array(tracks.enumerated()), id: \.element.uid) { index, track in
                         Button {
-                            playback.play(queue: tracks.map(\.uid), startAt: index)
+                            playback.play(items: tracks.map(\.uid), startUID: track.uid, contextKey: ListID.all.key)
                         } label: {
                             row(index: index, track: track)
                         }
@@ -236,6 +261,11 @@ struct ContentView: View {
                 Image(systemName: "lock.fill")
                     .foregroundStyle(.secondary)
                     .accessibilityLabel("Защищённый файл")
+            }
+            if track.playCount > 0 {
+                Text("▶ \(track.playCount)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
             Text(formatTime(track.duration))
                 .font(.footnote)

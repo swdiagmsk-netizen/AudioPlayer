@@ -9,6 +9,7 @@ import Observation
 final class AppContainer {
     let modelContainer: ModelContainer
     let library: LibraryAndBookmarkManager
+    let lists: QueueAndPlaylistManager
     let playback: PlaybackController
 
     /// Первое сканирование и восстановление состояния уже выполнены.
@@ -39,6 +40,7 @@ final class AppContainer {
         }
         modelContainer = container
         library = LibraryAndBookmarkManager(context: container.mainContext)
+        lists = QueueAndPlaylistManager(context: container.mainContext, library: library)
         playback = PlaybackController(library: library)
         playback.setUp()
 

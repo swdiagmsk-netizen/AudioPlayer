@@ -8,6 +8,8 @@ enum SettingsKeys {
     static let lockScreenMode = "settings.lockScreenMode"
     /// Поведение при запуске: "continue" (продолжить) или "idle" (ничего не воспроизводить).
     static let startMode = "settings.startMode"
+    /// Новые файлы добавлять в начало списка (иначе — в конец).
+    static let insertAtStart = "settings.insertAtStart"
 }
 
 /// Чтение настроек из логики (не из SwiftUI) с безопасными значениями по умолчанию.
@@ -21,6 +23,11 @@ enum AppSettings {
     /// true — на экране блокировки перемотка ±N, false — переход между треками.
     static var lockScreenUsesSkip: Bool {
         (UserDefaults.standard.string(forKey: SettingsKeys.lockScreenMode) ?? "skip") != "tracks"
+    }
+
+    /// true — новые файлы встают в начало списка при ручном порядке.
+    static var insertNewAtStart: Bool {
+        UserDefaults.standard.bool(forKey: SettingsKeys.insertAtStart)
     }
 
     /// true — при запуске продолжать воспроизведение с места остановки.

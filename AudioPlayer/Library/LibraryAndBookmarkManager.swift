@@ -76,7 +76,13 @@ final class LibraryAndBookmarkManager {
         var orphans = existing.filter { !foundPaths.contains($0.relativePath) }
         let newFiles = files.filter { !knownPaths.contains($0.relativePath) }
 
-        var nextOrder = (existing.map { $0.allOrderIndex }.max() ?? -1) + 1
+        // Новые файлы встают в начало или в конец списка — по настройке
+        var nextOrder: Int
+        if AppSettings.insertNewAtStart {
+            nextOrder = (existing.map { $0.allOrderIndex }.min() ?? 0) - newFiles.count
+        } else {
+            nextOrder = (existing.map { $0.allOrderIndex }.max() ?? -1) + 1
+        }
         var addedCount = 0
         var relinkedCount = 0
 

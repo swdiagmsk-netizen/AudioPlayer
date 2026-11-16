@@ -33,7 +33,6 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSLocalNetworkUsageDescription: Доступ к локальной сети нужен, чтобы принимать музыку с компьютера по Wi-Fi.
         UILaunchScreen: {}
-        UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         # Приложение предлагается в «Открыть в…» для аудиофайлов
@@ -75,10 +74,25 @@ targets:
         GENERATE_INFOPLIST_FILE: "NO"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
+  AudioPlayerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AudioPlayerTests
+    dependencies:
+      - target: AudioPlayer
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: "YES"
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.audioplayer.tests
+
 schemes:
   AudioPlayer:
     build:
       targets:
         AudioPlayer: all
+    test:
+      targets:
+        - AudioPlayerTests
     archive:
       config: Release
