@@ -1,0 +1,5 @@
+/* PlayMyDisk — описания разрешений (fr) */
+
+"NSMicrophoneUsageDescription" = "Le micro est nécessaire pour reconnaître une chanson qui joue à proximité.";
+"NSLocalNetworkUsageDescription" = "L’accès au réseau local est nécessaire pour recevoir de la musique depuis un ordinateur via Wi-Fi.";
+"CFBundleDisplayName" = "PlayMyDisk";

@@ -16,17 +16,17 @@ struct DuplicatesView: View {
         List {
             if groups.isEmpty {
                 Section {
-                    Text("Дубликатов не найдено.")
+                    Text(tr("Дубликатов не найдено."))
                         .foregroundStyle(.secondary)
                 }
             } else {
                 Section {
-                    Text("Дубликат — тот же файл по содержимому или совпадение исполнителя и названия при разнице длительности до 2 секунд. Отметьте, какой трек оставить.")
+                    Text(tr("Дубликат — тот же файл по содержимому или совпадение исполнителя и названия при разнице длительности до 2 секунд. Отметьте, какой трек оставить."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 ForEach(groups.indices, id: \.self) { index in
-                    Section("Группа \(index + 1)") {
+                    Section(tr("Группа %@", "\(index + 1)")) {
                         ForEach(groups[index], id: \.uid) { track in
                             Button {
                                 Haptics.select()
@@ -35,7 +35,7 @@ struct DuplicatesView: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(track.displayTitle).foregroundStyle(.primary)
-                                        Text("\(track.artist.isEmpty ? "Неизвестный исполнитель" : track.artist) · \(TimeText.format(track.duration)) · \(track.fileName)")
+                                        Text("\(track.artist.isEmpty ? tr("Неизвестный исполнитель") : track.artist) · \(TimeText.format(track.duration)) · \(track.fileName)")
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
@@ -50,29 +50,29 @@ struct DuplicatesView: View {
                     }
                 }
                 Section {
-                    Button("Убрать повторы из плейлистов") {
+                    Button(tr("Убрать повторы из плейлистов")) {
                         Haptics.tap()
                         let removed = container.lists.removeDuplicatesFromPlaylists(groups: groups, keepers: keepers)
-                        result = removed > 0 ? "Убрано строк из плейлистов: \(removed). Файлы остались на устройстве." : "В плейлистах повторов нет."
+                        result = removed > 0 ? tr("Убрано строк из плейлистов: %@. Файлы остались на устройстве.", "\(removed)") : tr("В плейлистах повторов нет.")
                     }
-                    Button("Удалить лишние файлы с устройства…", role: .destructive) {
+                    Button(tr("Удалить лишние файлы с устройства…"), role: .destructive) {
                         confirmDelete = true
                     }
                 }
             }
         }
-        .navigationTitle("Дубликаты")
+        .navigationTitle(tr("Дубликаты"))
         .onAppear(perform: reload)
-        .alert("Готово", isPresented: Binding(get: { result != nil }, set: { if !$0 { result = nil } })) {
+        .alert(tr("Готово"), isPresented: Binding(get: { result != nil }, set: { if !$0 { result = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(result ?? "")
         }
-        .alert("Удалить лишние файлы?", isPresented: $confirmDelete) {
-            Button("Удалить", role: .destructive) {
+        .alert(tr("Удалить лишние файлы?"), isPresented: $confirmDelete) {
+            Button(tr("Удалить"), role: .destructive) {
                 deleteExtras()
             }
-            Button("Отмена", role: .cancel) {}
+            Button(tr("Отмена"), role: .cancel) {}
         } message: {
             Text(deleteList)
         }
@@ -86,8 +86,8 @@ struct DuplicatesView: View {
 
     private var deleteList: String {
         let names = extras.prefix(8).map { "• " + $0.fileName }
-        let more = extras.count > 8 ? "\n…и ещё \(extras.count - 8)" : ""
-        return "С iPhone будут удалены файлы (\(extras.count)):\n" + names.joined(separator: "\n") + more + "\n\nОтменить нельзя."
+        let more = extras.count > 8 ? tr("\n…и ещё %@", "\(extras.count - 8)") : ""
+        return tr("С iPhone будут удалены файлы (%@):\n", "\(extras.count)") + names.joined(separator: "\n") + more + tr("\n\nОтменить нельзя.")
     }
 
     private func reload() {
@@ -107,7 +107,7 @@ struct DuplicatesView: View {
                 deleted += 1
             }
         }
-        result = "Удалено файлов: \(deleted) из \(tracks.count)."
+        result = tr("Удалено файлов: %@ из %@.", "\(deleted)", "\(tracks.count)")
         reload()
     }
 }

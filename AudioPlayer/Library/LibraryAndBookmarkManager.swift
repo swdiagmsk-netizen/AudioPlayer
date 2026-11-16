@@ -58,7 +58,7 @@ final class LibraryAndBookmarkManager {
             return
         }
         isBusy = true
-        progressText = "Поиск файлов…"
+        progressText = tr("Поиск файлов…")
 
         let files = await Task.detached(priority: .utility) { () -> [ScannedFile] in
             LibraryScanner.drainInbox()
@@ -87,7 +87,7 @@ final class LibraryAndBookmarkManager {
         var relinkedCount = 0
 
         for (index, file) in newFiles.enumerated() {
-            progressText = "Добавление \(index + 1) из \(newFiles.count)…"
+            progressText = tr("Добавление %@ из %@…", "\(index + 1)", "\(newFiles.count)")
             let url = LibraryPaths.url(forRelative: file.relativePath)
             let fileName = url.lastPathComponent
 
@@ -141,7 +141,7 @@ final class LibraryAndBookmarkManager {
         if addedCount > 0 || relinkedCount > 0 || removedCount > 0 {
             AppLogger.shared.log(
                 "scan",
-                "Найдено файлов: \(files.count); добавлено: \(addedCount); перемещено: \(relinkedCount); удалено из базы: \(removedCount)"
+                tr("Найдено файлов: %@; добавлено: %@; перемещено: %@; удалено из базы: %@", "\(files.count)", "\(addedCount)", "\(relinkedCount)", "\(removedCount)")
             )
         }
 
@@ -180,7 +180,7 @@ final class LibraryAndBookmarkManager {
     func importFiles(_ urls: [URL], intoFolder folder: String = "") async -> ImportReport {
         var report = ImportReport()
         for (index, source) in urls.enumerated() {
-            progressText = "Копирование \(index + 1) из \(urls.count)…"
+            progressText = tr("Копирование %@ из %@…", "\(index + 1)", "\(urls.count)")
             let name = source.lastPathComponent
 
             // Файл уже лежит в библиотеке (например, открыт из папки приложения)
@@ -217,7 +217,7 @@ final class LibraryAndBookmarkManager {
                     artist: existing.artist,
                     existingUID: existing.uid,
                     listKey: "all",
-                    listName: "Все треки"
+                    listName: tr("Все треки")
                 ))
                 report.added.removeAll { $0 == newTrack.fileName }
                 deleteFromDevice(newTrack)
@@ -227,7 +227,7 @@ final class LibraryAndBookmarkManager {
         if !report.isEmpty {
             AppLogger.shared.log(
                 "import",
-                "Импорт: добавлено \(report.added.count), пропущено \(report.skipped.count), ошибок \(report.failed.count)"
+                tr("Импорт: добавлено %@, пропущено %@, ошибок %@", "\(report.added.count)", "\(report.skipped.count)", "\(report.failed.count)")
             )
         }
         return report

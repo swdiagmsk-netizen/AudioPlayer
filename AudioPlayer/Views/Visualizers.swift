@@ -6,17 +6,17 @@ enum VisualizerKind: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .bars: return "Столбики"
-        case .needles: return "Стрелки"
-        case .lines: return "Линии"
+        case .bars: return tr("Столбики")
+        case .needles: return tr("Стрелки")
+        case .lines: return tr("Линии")
         }
     }
 
     var lcdName: String {
         switch self {
-        case .bars: return "СТОЛБИКИ"
-        case .needles: return "СТРЕЛКИ VU"
-        case .lines: return "ЛИНИИ"
+        case .bars: return tr("СТОЛБИКИ")
+        case .needles: return tr("СТРЕЛКИ VU")
+        case .lines: return tr("ЛИНИИ")
         }
     }
 

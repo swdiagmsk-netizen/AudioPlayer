@@ -104,7 +104,7 @@ struct PlayerPanel: View {
             )
             .tint(palette.accent)
             .disabled(!engine.isLoaded)
-            .accessibilityLabel("Позиция воспроизведения")
+            .accessibilityLabel(tr("Позиция воспроизведения"))
 
             HStack {
                 Text(TimeText.format(isDragging ? dragValue : engine.currentTime))
@@ -126,12 +126,12 @@ struct PlayerPanel: View {
                 size: 40 * big,
                 foreground: playback.shuffleOn ? palette.accent : palette.secondaryText,
                 background: playback.shuffleOn ? palette.rowCurrent : .clear,
-                label: playback.shuffleOn ? "Честный рандом включён" : "Честный рандом выключен"
+                label: playback.shuffleOn ? tr("Честный рандом включён") : tr("Честный рандом выключен")
             ) {
                 playback.toggleShuffle()
             }
             Spacer(minLength: 0)
-            roundButton(systemImage: "backward.end.fill", size: 48 * big, foreground: palette.text, background: palette.button, label: "Предыдущий трек") {
+            roundButton(systemImage: "backward.end.fill", size: 48 * big, foreground: palette.text, background: palette.button, label: tr("Предыдущий трек")) {
                 playback.previous()
             }
             .disabled(!hasTrack)
@@ -152,12 +152,12 @@ struct PlayerPanel: View {
             }
             .buttonStyle(PressDarkenStyle())
             .disabled(!hasTrack)
-            .accessibilityLabel(engine.isPlaying ? "Пауза" : "Играть")
+            .accessibilityLabel(engine.isPlaying ? tr("Пауза") : tr("Играть"))
 
             Spacer(minLength: 0)
             skipButton(forward: true)
             Spacer(minLength: 0)
-            roundButton(systemImage: "forward.end.fill", size: 48 * big, foreground: palette.text, background: palette.button, label: "Следующий трек") {
+            roundButton(systemImage: "forward.end.fill", size: 48 * big, foreground: palette.text, background: palette.button, label: tr("Следующий трек")) {
                 playback.next()
             }
             .disabled(!hasTrack)
@@ -176,9 +176,9 @@ struct PlayerPanel: View {
 
     private var repeatLabel: String {
         switch playback.repeatMode {
-        case .off: return "Повтор выключен"
-        case .all: return "Повтор всего списка"
-        case .one: return "Повтор одного трека"
+        case .off: return tr("Повтор выключен")
+        case .all: return tr("Повтор всего списка")
+        case .one: return tr("Повтор одного трека")
         }
     }
 
@@ -223,7 +223,7 @@ struct PlayerPanel: View {
         }
         .buttonStyle(PressDarkenStyle())
         .disabled(!hasTrack)
-        .accessibilityLabel(forward ? "Вперёд на \(skipInterval) секунд" : "Назад на \(skipInterval) секунд")
+        .accessibilityLabel(forward ? tr("Вперёд на %@ секунд", "\(skipInterval)") : tr("Назад на %@ секунд", "\(skipInterval)"))
     }
 
     // MARK: - Второй ряд
@@ -246,22 +246,22 @@ struct PlayerPanel: View {
             } primaryAction: {
                 playback.setRate(PlaybackSpeed.next(after: engine.rate))
             }
-            .accessibilityLabel("Скорость \(PlaybackSpeed.label(engine.rate))")
+            .accessibilityLabel(tr("Скорость %@", "\(PlaybackSpeed.label(engine.rate))"))
 
             Spacer(minLength: 0)
-            iconButton("slider.vertical.3", label: "Эквалайзер", action: onEqualizer)
+            iconButton("slider.vertical.3", label: tr("Эквалайзер"), action: onEqualizer)
             Spacer(minLength: 0)
             Menu {
                 Button {
                     onBookmark()
                 } label: {
-                    Label("Добавить закладку", systemImage: "bookmark")
+                    Label(tr("Добавить закладку"), systemImage: "bookmark")
                 }
                 .disabled(!hasTrack)
                 Button {
                     onBookmarksList()
                 } label: {
-                    Label("Все закладки", systemImage: "list.bullet")
+                    Label(tr("Все закладки"), systemImage: "list.bullet")
                 }
             } label: {
                 Image(systemName: "bookmark")
@@ -275,19 +275,19 @@ struct PlayerPanel: View {
                     onBookmarksList()
                 }
             }
-            .accessibilityLabel("Закладка: нажмите — добавить, удерживайте — список")
+            .accessibilityLabel(tr("Закладка: нажмите — добавить, удерживайте — список"))
             Spacer(minLength: 0)
             sleepButton
             if !playback.chapters.isEmpty {
                 Spacer(minLength: 0)
-                iconButton("list.number", label: "Главы", action: onChapters)
+                iconButton("list.number", label: tr("Главы"), action: onChapters)
             }
             Spacer(minLength: 0)
-            iconButton(RecognizeIcon.name, label: "Распознать песню", action: onRecognize)
+            iconButton(RecognizeIcon.name, label: tr("Распознать песню"), action: onRecognize)
             Spacer(minLength: 0)
-            iconButton("plus.circle", label: "Добавить файлы", action: onImport)
+            iconButton("plus.circle", label: tr("Добавить файлы"), action: onImport)
             Spacer(minLength: 0)
-            iconButton("gearshape", label: "Настройки", action: onSettings)
+            iconButton("gearshape", label: tr("Настройки"), action: onSettings)
         }
     }
 
@@ -308,12 +308,12 @@ struct PlayerPanel: View {
             .frame(width: 44, height: 44)
         }
         .buttonStyle(PressDarkenStyle())
-        .accessibilityLabel(playback.sleepTimer.isActive ? "Таймер сна: \(sleepLabel)" : "Таймер сна")
+        .accessibilityLabel(playback.sleepTimer.isActive ? tr("Таймер сна: %@", "\(sleepLabel)") : tr("Таймер сна"))
     }
 
     private var sleepLabel: String {
         switch playback.sleepTimer.mode {
-        case .endOfTrack: return "трек"
+        case .endOfTrack: return tr("трек")
         case .until:
             let seconds = Int(playback.sleepTimer.remaining.rounded(.up))
             return seconds >= 3600
@@ -377,7 +377,7 @@ struct LCDDisplay: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                 if let chapterTitle {
-                    Text("ГЛАВА: " + chapterTitle)
+                    Text(tr("ГЛАВА: ") + chapterTitle)
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(Palette.lcdDim)
                         .lineLimit(1)
@@ -392,7 +392,7 @@ struct LCDDisplay: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityHint("Нажмите, чтобы сменить визуализатор")
+        .accessibilityHint(tr("Нажмите, чтобы сменить визуализатор"))
     }
 
     private var titleLine: String {

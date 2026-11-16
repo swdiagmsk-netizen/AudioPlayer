@@ -8,17 +8,17 @@ struct DebugLogView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                Text(text.isEmpty ? "Журнал пуст" : text)
+                Text(text.isEmpty ? tr("Журнал пуст") : text)
                     .font(.system(.caption, design: .monospaced))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
                     .textSelection(.enabled)
             }
-            .navigationTitle("Журнал отладки")
+            .navigationTitle(tr("Журнал отладки"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Закрыть") {
+                    Button(tr("Закрыть")) {
                         dismiss()
                     }
                 }
@@ -26,14 +26,14 @@ struct DebugLogView: View {
                     ShareLink(item: AppLogger.shared.fileURL) {
                         Image(systemName: "square.and.arrow.up")
                     }
-                    .accessibilityLabel("Отправить журнал")
+                    .accessibilityLabel(tr("Отправить журнал"))
                     Button(role: .destructive) {
                         AppLogger.shared.clear()
                         text = ""
                     } label: {
                         Image(systemName: "trash")
                     }
-                    .accessibilityLabel("Очистить журнал")
+                    .accessibilityLabel(tr("Очистить журнал"))
                 }
             }
             .onAppear {

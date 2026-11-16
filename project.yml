@@ -6,6 +6,7 @@ options:
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
+  developmentLanguage: en
 
 settings:
   base:
@@ -26,6 +27,21 @@ targets:
         CFBundleDisplayName: PlayMyDisk
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: en
+        # Языки интерфейса (переводы — в Resources/<язык>.lproj)
+        CFBundleLocalizations:
+          - en
+          - ru
+          - zh-Hant
+          - ja
+          - es
+          - de
+          - fr
+          - pt
+          - hi
+          - ar
+          - bn
+          - id
         UIBackgroundModes:
           - audio
         UIFileSharingEnabled: true

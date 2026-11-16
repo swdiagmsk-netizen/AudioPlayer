@@ -21,22 +21,22 @@ struct ListTabsBar: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     if showHitTab {
-                        chip("★", accessibility: "Твой хит-парад", isOn: selected == .hitParade) {
+                        chip("★", accessibility: tr("Твой хит-парад"), isOn: selected == .hitParade) {
                             selected = .hitParade
                         }
                         .id("hit")
                     }
                     if showSuperTab {
-                        chip("♥", accessibility: "Супер!", isOn: selected == .superList) {
+                        chip("♥", accessibility: tr("Супер!"), isOn: selected == .superList) {
                             selected = .superList
                         }
                         .id("super")
                     }
-                    chip("Все треки", accessibility: "Все треки", isOn: selected == .all) {
+                    chip(tr("Все треки"), accessibility: tr("Все треки"), isOn: selected == .all) {
                         selected = .all
                     }
                     .id("all")
-                    chip("Папки", accessibility: "Папки", isOn: isFolderSelected) {
+                    chip(tr("Папки"), accessibility: tr("Папки"), isOn: isFolderSelected) {
                         selected = .folder(currentFolder)
                     }
                     .id("folders")
@@ -50,12 +50,12 @@ struct ListTabsBar: View {
                             Button {
                                 onRename(playlist)
                             } label: {
-                                Label("Переименовать", systemImage: "pencil")
+                                Label(tr("Переименовать"), systemImage: "pencil")
                             }
                             Button(role: .destructive) {
                                 onDelete(playlist)
                             } label: {
-                                Label("Удалить плейлист", systemImage: "trash")
+                                Label(tr("Удалить плейлист"), systemImage: "trash")
                             }
                         }
                         .draggable(playlist.uid.uuidString)
@@ -76,7 +76,7 @@ struct ListTabsBar: View {
                             .background(Capsule().fill(palette.button))
                             .overlay(Capsule().stroke(palette.line, lineWidth: 1))
                     }
-                    .accessibilityLabel("Новый плейлист")
+                    .accessibilityLabel(tr("Новый плейлист"))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)

@@ -1,0 +1,5 @@
+/* PlayMyDisk — описания разрешений (hi) */
+
+"NSMicrophoneUsageDescription" = "आसपास बज रहे गाने को पहचानने के लिए माइक्रोफ़ोन चाहिए।";
+"NSLocalNetworkUsageDescription" = "कंप्यूटर से Wi-Fi पर संगीत पाने के लिए लोकल नेटवर्क की अनुमति चाहिए।";
+"CFBundleDisplayName" = "PlayMyDisk";

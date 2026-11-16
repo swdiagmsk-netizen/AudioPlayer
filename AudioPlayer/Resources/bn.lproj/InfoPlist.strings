@@ -1,0 +1,5 @@
+/* PlayMyDisk — описания разрешений (bn) */
+
+"NSMicrophoneUsageDescription" = "কাছাকাছি বাজতে থাকা গান শনাক্ত করতে মাইক্রোফোন দরকার।";
+"NSLocalNetworkUsageDescription" = "কম্পিউটার থেকে Wi-Fi-তে গান পেতে লোকাল নেটওয়ার্কে অ্যাক্সেস দরকার।";
+"CFBundleDisplayName" = "PlayMyDisk";

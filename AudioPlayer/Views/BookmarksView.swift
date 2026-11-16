@@ -38,34 +38,34 @@ struct BookmarksView: View {
                 }
             }
             .id(refresh)
-            .navigationTitle("Закладки")
+            .navigationTitle(tr("Закладки"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Picker("Показывать", selection: $showAll) {
-                        Text("Этот трек").tag(false)
-                        Text("Все").tag(true)
+                    Picker(tr("Показывать"), selection: $showAll) {
+                        Text(tr("Этот трек")).tag(false)
+                        Text(tr("Все")).tag(true)
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 200)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                    Button(tr("Готово")) { dismiss() }
                 }
             }
             .alert(
-                "Заметка",
+                tr("Заметка"),
                 isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })
             ) {
-                TextField("Текст заметки", text: $noteText)
-                Button("Сохранить") {
+                TextField(tr("Текст заметки"), text: $noteText)
+                Button(tr("Сохранить")) {
                     if let editing {
                         container.library.updateBookmark(editing, note: noteText)
                         refresh += 1
                     }
                     editing = nil
                 }
-                Button("Отмена", role: .cancel) {
+                Button(tr("Отмена"), role: .cancel) {
                     editing = nil
                 }
             }
@@ -73,7 +73,7 @@ struct BookmarksView: View {
     }
 
     private var emptyRow: some View {
-        Text("Закладок пока нет. Нажмите значок закладки на панели плеера, чтобы отметить текущее место.")
+        Text(tr("Закладок пока нет. Нажмите значок закладки на панели плеера, чтобы отметить текущее место."))
             .font(.subheadline)
             .foregroundStyle(.secondary)
     }
@@ -89,7 +89,7 @@ struct BookmarksView: View {
                     Text(TimeText.format(bookmark.time))
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(palette.accent)
-                    Text(bookmark.note.isEmpty ? "Без заметки" : bookmark.note)
+                    Text(bookmark.note.isEmpty ? tr("Без заметки") : bookmark.note)
                         .foregroundStyle(bookmark.note.isEmpty ? .secondary : .primary)
                         .lineLimit(2)
                     Spacer()
@@ -100,7 +100,7 @@ struct BookmarksView: View {
                     container.library.deleteBookmark(bookmark)
                     refresh += 1
                 } label: {
-                    Label("Удалить", systemImage: "trash")
+                    Label(tr("Удалить"), systemImage: "trash")
                 }
             }
             .contextMenu {
@@ -108,7 +108,7 @@ struct BookmarksView: View {
                     noteText = bookmark.note
                     editing = bookmark
                 } label: {
-                    Label("Изменить заметку", systemImage: "pencil")
+                    Label(tr("Изменить заметку"), systemImage: "pencil")
                 }
             }
         }
@@ -140,11 +140,11 @@ struct ChaptersView: View {
                     }
                 }
             }
-            .navigationTitle("Главы")
+            .navigationTitle(tr("Главы"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                    Button(tr("Готово")) { dismiss() }
                 }
             }
         }

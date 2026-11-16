@@ -41,9 +41,9 @@ struct TrackRow: View {
                             if track.isProtected {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: 10))
-                                    .accessibilityLabel("Защищённый файл")
+                                    .accessibilityLabel(tr("Защищённый файл"))
                             }
-                            Text(track.artist.isEmpty ? "Неизвестный исполнитель" : track.artist)
+                            Text(track.artist.isEmpty ? tr("Неизвестный исполнитель") : track.artist)
                                 .lineLimit(1)
                         }
                         .font(.system(size: 13))
@@ -69,7 +69,7 @@ struct TrackRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(track.isSuper ? "Убрать из «Супер!»" : "Супер!")
+                .accessibilityLabel(track.isSuper ? tr("Убрать из «Супер!»") : tr("Супер!"))
             }
 
             VStack(alignment: .trailing, spacing: 2) {
@@ -82,7 +82,7 @@ struct TrackRow: View {
                         Text("\(track.playCount)")
                     }
                     .font(.system(size: 11))
-                    .accessibilityLabel("Прослушиваний: \(track.playCount)")
+                    .accessibilityLabel(tr("Прослушиваний: %@", "\(track.playCount)"))
                 }
             }
             .monospacedDigit()
@@ -100,7 +100,7 @@ struct TrackRow: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Действия с файлом «\(track.displayTitle)»")
+            .accessibilityLabel(tr("Действия с файлом «%@»", "\(track.displayTitle)"))
         }
         .frame(height: 56)
     }
@@ -112,7 +112,7 @@ struct TrackRow: View {
                 .font(.system(size: 15))
                 .foregroundStyle(palette.accent)
                 .symbolEffect(.variableColor.iterative, isActive: isPlaying)
-                .accessibilityLabel("Играет")
+                .accessibilityLabel(tr("Играет"))
         } else {
             Text(String(format: "%02d", item.number))
                 .font(.system(size: 15, design: .monospaced))

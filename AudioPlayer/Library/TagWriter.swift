@@ -287,7 +287,7 @@ private enum MP4TagWriter {
         }
 
         guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
-            throw TagWriteError(message: "Экспорт недоступен")
+            throw TagWriteError(message: tr("Экспорт недоступен"))
         }
         session.metadata = items
         let temp = url.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).\(url.pathExtension)")
@@ -311,31 +311,31 @@ private enum FLACWriter {
 
         var offset: UInt64 = 0
         guard var magic = try handle.read(upToCount: 4), magic.count == 4 else {
-            throw TagWriteError(message: "Файл повреждён")
+            throw TagWriteError(message: tr("Файл повреждён"))
         }
         if magic.prefix(3) == Data("ID3".utf8) {
-            guard let rest = try handle.read(upToCount: 6), rest.count == 6 else { throw TagWriteError(message: "Файл повреждён") }
+            guard let rest = try handle.read(upToCount: 6), rest.count == 6 else { throw TagWriteError(message: tr("Файл повреждён")) }
             let size = FileRewrite.readSyncsafe(Array([UInt8](rest).suffix(4)))
             offset = UInt64(10 + size)
             try handle.seek(toOffset: offset)
-            guard let m = try handle.read(upToCount: 4), m.count == 4 else { throw TagWriteError(message: "Файл повреждён") }
+            guard let m = try handle.read(upToCount: 4), m.count == 4 else { throw TagWriteError(message: tr("Файл повреждён")) }
             magic = m
         }
-        guard magic == Data("fLaC".utf8) else { throw TagWriteError(message: "Это не FLAC-файл") }
+        guard magic == Data("fLaC".utf8) else { throw TagWriteError(message: tr("Это не FLAC-файл")) }
 
         // Читаем все блоки метаданных
         var blocks: [(type: UInt8, body: Data)] = []
         var isLast = false
         while !isLast {
             guard let header = try handle.read(upToCount: 4), header.count == 4 else {
-                throw TagWriteError(message: "Файл повреждён")
+                throw TagWriteError(message: tr("Файл повреждён"))
             }
             let h = [UInt8](header)
             isLast = (h[0] & 0x80) != 0
             let type = h[0] & 0x7F
             let length = (Int(h[1]) << 16) | (Int(h[2]) << 8) | Int(h[3])
             guard let body = try handle.read(upToCount: length), body.count == length else {
-                throw TagWriteError(message: "Файл повреждён")
+                throw TagWriteError(message: tr("Файл повреждён"))
             }
             blocks.append((type, body))
         }
@@ -363,7 +363,7 @@ private enum FLACWriter {
         var header = Data("fLaC".utf8)
         for (index, block) in kept.enumerated() {
             let last = index == kept.count - 1
-            guard block.body.count < (1 << 24) else { throw TagWriteError(message: "Слишком большая обложка") }
+            guard block.body.count < (1 << 24) else { throw TagWriteError(message: tr("Слишком большая обложка")) }
             header += Data([(last ? 0x80 : 0x00) | block.type])
             header += Data(FileRewrite.bigEndian32(block.body.count).suffix(3))
             header += block.body

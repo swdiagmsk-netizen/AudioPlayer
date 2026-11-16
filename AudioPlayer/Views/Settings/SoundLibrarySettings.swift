@@ -26,31 +26,31 @@ struct SoundSettingsView: View {
     var body: some View {
         List {
             Section {
-                Picker("При запуске", selection: $startMode.withHaptic()) {
-                    Text("Продолжить с места остановки").tag("continue")
-                    Text("Ничего не воспроизводить").tag("idle")
+                Picker(tr("При запуске"), selection: $startMode.withHaptic()) {
+                    Text(tr("Продолжить с места остановки")).tag("continue")
+                    Text(tr("Ничего не воспроизводить")).tag("idle")
                 }
                 .pickerStyle(.inline)
                 .labelsHidden()
             } header: {
-                Text("При запуске приложения")
+                Text(tr("При запуске приложения"))
             } footer: {
                 Text(startMode == "idle"
-                     ? "Плеер откроется на последнем плейлисте и треке, но играть не начнёт."
-                     : "Музыка продолжит играть с той секунды, где остановилась при закрытии.")
+                     ? tr("Плеер откроется на последнем плейлисте и треке, но играть не начнёт.")
+                     : tr("Музыка продолжит играть с той секунды, где остановилась при закрытии."))
             }
 
             Section {
-                Picker("Шаг перемотки", selection: skipChoice.withHaptic()) {
+                Picker(tr("Шаг перемотки"), selection: skipChoice.withHaptic()) {
                     ForEach(skipPresets, id: \.self) { value in
-                        Text("\(value) с").tag(value)
+                        Text(tr("%@ с", "\(value)")).tag(value)
                     }
-                    Text("Своё").tag(0)
+                    Text(tr("Своё")).tag(0)
                 }
                 .pickerStyle(.segmented)
                 if !skipPresets.contains(skipInterval) {
                     HStack {
-                        Text("Своё значение")
+                        Text(tr("Своё значение"))
                         Spacer()
                         TextField("15", text: $customSkip)
                             .keyboardType(.numberPad)
@@ -58,32 +58,32 @@ struct SoundSettingsView: View {
                             .frame(width: 70)
                             .onSubmit(applyCustomSkip)
                             .onChange(of: customSkip) { _, _ in applyCustomSkip() }
-                        Text("с (1–600)").foregroundStyle(.secondary)
+                        Text(tr("с (1–600)")).foregroundStyle(.secondary)
                     }
                 }
-                Picker("Кнопки на экране блокировки", selection: $lockScreenMode.withHaptic()) {
-                    Text("Перемотка ±\(skipInterval) с").tag("skip")
-                    Text("Пред./след. трек").tag("tracks")
+                Picker(tr("Кнопки на экране блокировки"), selection: $lockScreenMode.withHaptic()) {
+                    Text(tr("Перемотка ±%@ с", "\(skipInterval)")).tag("skip")
+                    Text(tr("Пред./след. трек")).tag("tracks")
                 }
             } header: {
-                Text("Перемотка")
+                Text(tr("Перемотка"))
             } footer: {
-                Text("iOS показывает на экране блокировки только три кнопки, поэтому одновременно либо перемотка, либо переход между треками. В самом приложении есть и то, и другое.")
+                Text(tr("iOS показывает на экране блокировки только три кнопки, поэтому одновременно либо перемотка, либо переход между треками. В самом приложении есть и то, и другое."))
             }
             .onChange(of: skipInterval) { _, _ in container.playback.applyLockScreenSettings() }
             .onChange(of: lockScreenMode) { _, _ in container.playback.applyLockScreenSettings() }
 
-            Section("Звук") {
-                Toggle("Выравнивание громкости", isOn: $normalize.withHaptic())
+            Section(tr("Звук")) {
+                Toggle(tr("Выравнивание громкости"), isOn: $normalize.withHaptic())
                     .onChange(of: normalize) { _, _ in container.playback.applyNormalizationSetting() }
-                Toggle("Плавное затухание в конце трека", isOn: $fadeEnd.withHaptic())
+                Toggle(tr("Плавное затухание в конце трека"), isOn: $fadeEnd.withHaptic())
                 if fadeEnd {
-                    Stepper("Длительность затухания: \(fadeEndSeconds) с", value: $fadeEndSeconds.withHaptic(), in: 1...10)
+                    Stepper(tr("Длительность затухания: %@ с", "\(fadeEndSeconds)"), value: $fadeEndSeconds.withHaptic(), in: 1...10)
                 }
                 Toggle(isOn: $haptics) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Вибрация (тактильный отклик)")
-                        Text("Play/Пауза и любые действия в меню")
+                        Text(tr("Вибрация (тактильный отклик)"))
+                        Text(tr("Play/Пауза и любые действия в меню"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -93,35 +93,35 @@ struct SoundSettingsView: View {
                     Haptics.select()
                     showEqualizer = true
                 } label: {
-                    LabeledContent("Эквалайзер", value: container.equalizer.isEnabled ? container.equalizer.presetName : "выкл")
+                    LabeledContent(tr("Эквалайзер"), value: container.equalizer.isEnabled ? tr(container.equalizer.presetName) : tr("выкл"))
                 }
                 .foregroundStyle(.primary)
                 Button {
                     Haptics.select()
                     showSleepTimer = true
                 } label: {
-                    LabeledContent("Таймер сна", value: container.playback.sleepTimer.isActive ? "вкл" : "выкл")
+                    LabeledContent(tr("Таймер сна"), value: container.playback.sleepTimer.isActive ? tr("вкл") : tr("выкл"))
                 }
                 .foregroundStyle(.primary)
             }
 
-            Section("Аудиокниги") {
-                Toggle("Запоминать позицию", isOn: $rememberBooks.withHaptic())
-                Picker("Аудиокнига — файлы от", selection: $bookThreshold.withHaptic()) {
-                    Text("10 мин").tag(10)
-                    Text("20 мин").tag(20)
-                    Text("30 мин").tag(30)
-                    Text("60 мин").tag(60)
+            Section(tr("Аудиокниги")) {
+                Toggle(tr("Запоминать позицию"), isOn: $rememberBooks.withHaptic())
+                Picker(tr("Аудиокнига — файлы от"), selection: $bookThreshold.withHaptic()) {
+                    Text(tr("10 мин")).tag(10)
+                    Text(tr("20 мин")).tag(20)
+                    Text(tr("30 мин")).tag(30)
+                    Text(tr("60 мин")).tag(60)
                 }
-                Picker("Откат при возобновлении", selection: $rewindSeconds.withHaptic()) {
-                    Text("0 с").tag(0)
-                    Text("3 с").tag(3)
-                    Text("5 с").tag(5)
-                    Text("10 с").tag(10)
+                Picker(tr("Откат при возобновлении"), selection: $rewindSeconds.withHaptic()) {
+                    Text(tr("0 с")).tag(0)
+                    Text(tr("3 с")).tag(3)
+                    Text(tr("5 с")).tag(5)
+                    Text(tr("10 с")).tag(10)
                 }
             }
         }
-        .navigationTitle("Звук и воспроизведение")
+        .navigationTitle(tr("Звук и воспроизведение"))
         .onAppear {
             if !skipPresets.contains(skipInterval) {
                 customSkip = String(skipInterval)
@@ -177,37 +177,37 @@ struct LibrarySettingsView: View {
 
     var body: some View {
         List {
-            Section("Список треков") {
-                Toggle("Счётчик прослушиваний", isOn: $showPlayCount.withHaptic())
-                Toggle("Показывать вкладку ★ (хит-парад)", isOn: $showHitTab.withHaptic())
-                Toggle("Показывать вкладку ♥ «Супер!»", isOn: $showSuperTab.withHaptic())
-                Toggle("Сердечко «Супер!» в строках", isOn: $showHeart.withHaptic())
+            Section(tr("Список треков")) {
+                Toggle(tr("Счётчик прослушиваний"), isOn: $showPlayCount.withHaptic())
+                Toggle(tr("Показывать вкладку ★ (хит-парад)"), isOn: $showHitTab.withHaptic())
+                Toggle(tr("Показывать вкладку ♥ «Супер!»"), isOn: $showSuperTab.withHaptic())
+                Toggle(tr("Сердечко «Супер!» в строках"), isOn: $showHeart.withHaptic())
             }
 
             Section {
-                Toggle("Разрешать дубликаты", isOn: $allowDuplicates.withHaptic())
+                Toggle(tr("Разрешать дубликаты"), isOn: $allowDuplicates.withHaptic())
                 NavigationLink {
                     DuplicatesView(container: container)
                         .onAppear { Haptics.select() }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Найти и убрать дубликаты")
-                        Text("Только из плейлистов. С iPhone — лишь после подтверждения")
+                        Text(tr("Найти и убрать дубликаты"))
+                        Text(tr("Только из плейлистов. С iPhone — лишь после подтверждения"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
             } footer: {
-                Text("Если выключено — при добавлении такой же композиции появится уведомление с номером строки, и повтор не добавится.")
+                Text(tr("Если выключено — при добавлении такой же композиции появится уведомление с номером строки, и повтор не добавится."))
             }
 
-            Section("Добавление файлов") {
-                Picker("Куда добавлять новые", selection: $insertAtStart.withHaptic()) {
-                    Text("В конец").tag(false)
-                    Text("В начало").tag(true)
+            Section(tr("Добавление файлов")) {
+                Picker(tr("Куда добавлять новые"), selection: $insertAtStart.withHaptic()) {
+                    Text(tr("В конец")).tag(false)
+                    Text(tr("В начало")).tag(true)
                 }
-                Toggle("Запоминать последнюю папку", isOn: $rememberFolder.withHaptic())
-                NavigationLink("Wi-Fi-импорт с компьютера") {
+                Toggle(tr("Запоминать последнюю папку"), isOn: $rememberFolder.withHaptic())
+                NavigationLink(tr("Wi-Fi-импорт с компьютера")) {
                     WiFiTransferView(controller: container.wifi)
                         .onAppear { Haptics.select() }
                 }
@@ -216,11 +216,11 @@ struct LibrarySettingsView: View {
                         .onAppear { Haptics.select() }
                 } label: {
                     HStack {
-                        Text("Распознанные песни")
+                        Text(tr("Распознанные песни"))
                         Spacer()
                         let waiting = container.recognition.store.pending.count
                         if waiting > 0 {
-                            Text("ждут сети: \(waiting)")
+                            Text(tr("ждут сети: %@", "\(waiting)"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -228,22 +228,22 @@ struct LibrarySettingsView: View {
                 }
             }
 
-            Section("Найти в интернете") {
-                Picker("Поисковик", selection: $searchEngine.withHaptic()) {
+            Section(tr("Найти в интернете")) {
+                Picker(tr("Поисковик"), selection: $searchEngine.withHaptic()) {
                     Text("Google").tag("google")
-                    Text("Яндекс").tag("yandex")
+                    Text(tr("Яндекс")).tag("yandex")
                     Text("DuckDuckGo").tag("duckduckgo")
                 }
             }
 
-            Section("Мои плейлисты") {
-                NavigationLink("Порядок, переименование, удаление") {
+            Section(tr("Мои плейлисты")) {
+                NavigationLink(tr("Порядок, переименование, удаление")) {
                     PlaylistsManagerView(lists: container.lists)
                         .onAppear { Haptics.select() }
                 }
             }
         }
-        .navigationTitle("Библиотека и плейлисты")
+        .navigationTitle(tr("Библиотека и плейлисты"))
     }
 }
 
@@ -259,8 +259,8 @@ struct PlaylistsManagerView: View {
     var body: some View {
         List {
             Section {
-                lockedRow("★  хит-парад")
-                lockedRow("♥  Супер!")
+                lockedRow(tr("★  хит-парад"))
+                lockedRow(tr("♥  Супер!"))
             }
             Section {
                 ForEach(lists.playlists, id: \.uid) { playlist in
@@ -275,13 +275,13 @@ struct PlaylistsManagerView: View {
                             Image(systemName: "pencil")
                         }
                         .buttonStyle(.borderless)
-                        .accessibilityLabel("Переименовать «\(playlist.name)»")
+                        .accessibilityLabel(tr("Переименовать «%@»", "\(playlist.name)"))
                     }
                     .swipeActions {
                         Button(role: .destructive) {
                             toDelete = playlist
                         } label: {
-                            Label("Удалить", systemImage: "trash")
+                            Label(tr("Удалить"), systemImage: "trash")
                         }
                     }
                 }
@@ -290,46 +290,46 @@ struct PlaylistsManagerView: View {
                     lists.movePlaylists(fromOffsets: offsets, toOffset: destination)
                 }
                 if lists.playlists.isEmpty {
-                    Text("Плейлистов пока нет — создайте их кнопкой «+» на главном экране.")
+                    Text(tr("Плейлистов пока нет — создайте их кнопкой «+» на главном экране."))
                         .foregroundStyle(.secondary)
                 }
             } footer: {
-                Text("Порядок меняется перетаскиванием за ≡. Так же — долгим нажатием на вкладку на главном экране.")
+                Text(tr("Порядок меняется перетаскиванием за ≡. Так же — долгим нажатием на вкладку на главном экране."))
             }
         }
         .environment(\.editMode, .constant(.active))
-        .navigationTitle("Мои плейлисты")
+        .navigationTitle(tr("Мои плейлисты"))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("А–Я") {
+                Button(tr("А–Я")) {
                     Haptics.tap()
                     lists.sortPlaylistsAlphabetically()
                 }
             }
         }
         .alert(
-            "Переименовать плейлист",
+            tr("Переименовать плейлист"),
             isPresented: Binding(get: { toRename != nil }, set: { if !$0 { toRename = nil } })
         ) {
-            TextField("Название", text: $renameText)
-            Button("Сохранить") {
+            TextField(tr("Название"), text: $renameText)
+            Button(tr("Сохранить")) {
                 if let toRename { lists.renamePlaylist(toRename, to: renameText) }
                 toRename = nil
             }
-            Button("Отмена", role: .cancel) { toRename = nil }
+            Button(tr("Отмена"), role: .cancel) { toRename = nil }
         }
         .alert(
-            "Удалить плейлист?",
+            tr("Удалить плейлист?"),
             isPresented: Binding(get: { toDelete != nil }, set: { if !$0 { toDelete = nil } }),
             presenting: toDelete
         ) { playlist in
-            Button("Удалить", role: .destructive) {
+            Button(tr("Удалить"), role: .destructive) {
                 lists.deletePlaylist(playlist)
                 toDelete = nil
             }
-            Button("Отмена", role: .cancel) { toDelete = nil }
+            Button(tr("Отмена"), role: .cancel) { toDelete = nil }
         } message: { playlist in
-            Text("Плейлист «\(playlist.name)» будет удалён. Файлы останутся на устройстве.")
+            Text(tr("Плейлист «%@» будет удалён. Файлы останутся на устройстве.", "\(playlist.name)"))
         }
     }
 
@@ -337,7 +337,7 @@ struct PlaylistsManagerView: View {
         HStack {
             Text(title)
             Spacer()
-            Text("автоматический")
+            Text(tr("автоматический"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -150,7 +150,7 @@ struct ContentView: View {
                 onRemoveFromPlaylist: {
                     if let entry = target.entry {
                         lists.remove([entry])
-                        showToast("Убрано из плейлиста")
+                        showToast(tr("Убрано из плейлиста"))
                     }
                 },
                 onDelete: {
@@ -178,13 +178,13 @@ struct ContentView: View {
             .ignoresSafeArea()
         }
         .alert(
-            "Такая композиция уже есть",
+            tr("Такая композиция уже есть"),
             isPresented: Binding(get: { !duplicateNotice.isEmpty }, set: { if !$0 { duplicateNotice = [] } })
         ) {
-            Button("Понятно", role: .cancel) {
+            Button(tr("Понятно"), role: .cancel) {
                 duplicateNotice = []
             }
-            Button("Показать в списке") {
+            Button(tr("Показать в списке")) {
                 showDuplicate(duplicateNotice.first)
                 duplicateNotice = []
             }
@@ -203,20 +203,20 @@ struct ContentView: View {
                 .environment(\.palette, palette)
         }
         .alert(
-            "Нашлась песня из отложенных",
+            tr("Нашлась песня из отложенных"),
             isPresented: Binding(
                 get: { !container.recognition.announcements.isEmpty && !container.recognition.isPresented },
                 set: { if !$0 { container.recognition.dismissAnnouncement() } }
             )
         ) {
-            Button("Копировать") {
+            Button(tr("Копировать")) {
                 if let song = container.recognition.announcements.first {
                     UIPasteboard.general.string = song.displayLine
                     Haptics.select()
                 }
                 container.recognition.dismissAnnouncement()
             }
-            Button("ОК", role: .cancel) {
+            Button(tr("ОК"), role: .cancel) {
                 container.recognition.dismissAnnouncement()
             }
         } message: {
@@ -244,18 +244,18 @@ struct ContentView: View {
                 .presentationDetents([.medium, .large])
         }
         .alert(
-            "Закладка на \(TimeText.format(bookmarkForNote?.time ?? 0))",
+            tr("Закладка на %@", "\(TimeText.format(bookmarkForNote?.time ?? 0))"),
             isPresented: Binding(get: { bookmarkForNote != nil }, set: { if !$0 { bookmarkForNote = nil } })
         ) {
-            TextField("Заметка (можно пропустить)", text: $bookmarkNote)
-            Button("Сохранить") {
+            TextField(tr("Заметка (можно пропустить)"), text: $bookmarkNote)
+            Button(tr("Сохранить")) {
                 if let bookmark = bookmarkForNote, !bookmarkNote.isEmpty {
                     container.library.updateBookmark(bookmark, note: bookmarkNote)
                 }
                 bookmarkNote = ""
                 bookmarkForNote = nil
             }
-            Button("Без заметки", role: .cancel) {
+            Button(tr("Без заметки"), role: .cancel) {
                 bookmarkNote = ""
                 bookmarkForNote = nil
             }
@@ -265,59 +265,59 @@ struct ContentView: View {
                 .environment(\.palette, palette)
         }
         .alert(
-            pendingDelete.count == 1 ? "Удалить файл с устройства?" : "Удалить файлы с устройства?",
+            pendingDelete.count == 1 ? tr("Удалить файл с устройства?") : tr("Удалить файлы с устройства?"),
             isPresented: Binding(get: { !pendingDelete.isEmpty }, set: { if !$0 { pendingDelete = [] } })
         ) {
-            Button("Удалить", role: .destructive) {
+            Button(tr("Удалить"), role: .destructive) {
                 performDelete()
             }
-            Button("Отмена", role: .cancel) {
+            Button(tr("Отмена"), role: .cancel) {
                 pendingDelete = []
             }
         } message: {
             Text(deleteMessage)
         }
-        .alert("Новый плейлист", isPresented: $showNewPlaylist) {
-            TextField("Название", text: $newPlaylistName)
-            Button("Создать") {
+        .alert(tr("Новый плейлист"), isPresented: $showNewPlaylist) {
+            TextField(tr("Название"), text: $newPlaylistName)
+            Button(tr("Создать")) {
                 if let playlist = lists.createPlaylist(named: newPlaylistName) {
                     selectedList = .playlist(playlist.uid)
                 }
                 newPlaylistName = ""
             }
-            Button("Отмена", role: .cancel) {
+            Button(tr("Отмена"), role: .cancel) {
                 newPlaylistName = ""
             }
         }
         .alert(
-            "Переименовать плейлист",
+            tr("Переименовать плейлист"),
             isPresented: Binding(get: { playlistToRename != nil }, set: { if !$0 { playlistToRename = nil } })
         ) {
-            TextField("Название", text: $renameText)
-            Button("Сохранить") {
+            TextField(tr("Название"), text: $renameText)
+            Button(tr("Сохранить")) {
                 if let playlist = playlistToRename {
                     lists.renamePlaylist(playlist, to: renameText)
                 }
                 playlistToRename = nil
             }
-            Button("Отмена", role: .cancel) {
+            Button(tr("Отмена"), role: .cancel) {
                 playlistToRename = nil
             }
         }
         .alert(
-            "Удалить плейлист?",
+            tr("Удалить плейлист?"),
             isPresented: Binding(get: { playlistToDelete != nil }, set: { if !$0 { playlistToDelete = nil } }),
             presenting: playlistToDelete
         ) { playlist in
-            Button("Удалить", role: .destructive) {
+            Button(tr("Удалить"), role: .destructive) {
                 lists.deletePlaylist(playlist)
                 playlistToDelete = nil
             }
-            Button("Отмена", role: .cancel) {
+            Button(tr("Отмена"), role: .cancel) {
                 playlistToDelete = nil
             }
         } message: { playlist in
-            Text("Плейлист «\(playlist.name)» будет удалён. Файлы останутся на устройстве.")
+            Text(tr("Плейлист «%@» будет удалён. Файлы останутся на устройстве.", "\(playlist.name)"))
         }
         .alert(
             "PlayMyDisk",
@@ -402,7 +402,7 @@ struct ContentView: View {
                 }
             }
         case .failure(let error):
-            showToast("Не удалось выбрать файлы: \(error.localizedDescription)")
+            showToast(tr("Не удалось выбрать файлы: %@", "\(error.localizedDescription)"))
         }
     }
 
@@ -411,13 +411,13 @@ struct ContentView: View {
     private var duplicateMessage: String {
         guard let first = duplicateNotice.first else { return "" }
         let list = ListID(key: first.listKey) ?? .all
-        let number = lists.tracks(for: list).firstIndex(where: { $0.uid == first.existingUID }).map { "Строка \($0 + 1): " } ?? ""
+        let number = lists.tracks(for: list).firstIndex(where: { $0.uid == first.existingUID }).map { tr("Строка %@: ", "\($0 + 1)") } ?? ""
         let artist = first.artist.isEmpty ? "" : " — \(first.artist)"
-        var text = "\(number)«\(first.title)»\(artist)\nСписок: «\(first.listName)»."
+        var text = tr("%@«%@»%@\nСписок: «%@».", "\(number)", "\(first.title)", "\(artist)", "\(first.listName)")
         if duplicateNotice.count > 1 {
-            text += "\nИ ещё повторов: \(duplicateNotice.count - 1)."
+            text += tr("\nИ ещё повторов: %@.", "\(duplicateNotice.count - 1)")
         }
-        text += "\nПовтор не добавлен."
+        text += tr("\nПовтор не добавлен.")
         return text
     }
 
@@ -436,11 +436,11 @@ struct ContentView: View {
     /// подсказка воспользоваться «Поделиться».
     private func mailFile(_ track: TrackRecord) {
         guard MFMailComposeViewController.canSendMail() else {
-            showToast("Почта на iPhone не настроена — используйте «Поделиться файлом»")
+            showToast(tr("Почта на iPhone не настроена — используйте «Поделиться файлом»"))
             return
         }
         guard track.fileSize <= 20 * 1024 * 1024 else {
-            showToast("Файл больше 20 МБ — используйте «Поделиться файлом» (AirDrop)")
+            showToast(tr("Файл больше 20 МБ — используйте «Поделиться файлом» (AirDrop)"))
             return
         }
         mailTarget = track
@@ -462,9 +462,9 @@ struct ContentView: View {
 
     private func describe(_ report: ImportReport) -> String? {
         if report.isEmpty { return nil }
-        var parts = ["Добавлено: \(report.added.count)"]
-        if !report.skipped.isEmpty { parts.append("пропущено: \(report.skipped.count)") }
-        if !report.failed.isEmpty { parts.append("ошибок: \(report.failed.count)") }
+        var parts = [tr("Добавлено: %@", "\(report.added.count)")]
+        if !report.skipped.isEmpty { parts.append(tr("пропущено: %@", "\(report.skipped.count)")) }
+        if !report.failed.isEmpty { parts.append(tr("ошибок: %@", "\(report.failed.count)")) }
         return parts.joined(separator: ", ")
     }
 
@@ -478,9 +478,9 @@ struct ContentView: View {
     private var deleteMessage: String {
         if pendingDelete.count == 1, let track = pendingDelete.first {
             let artist = track.artist.isEmpty ? "" : track.artist + " — "
-            return "«\(artist)\(track.displayTitle)» будет удалён с iPhone и из всех плейлистов. Закладки и счётчик прослушиваний тоже удалятся. Отменить нельзя."
+            return tr("«%@%@» будет удалён с iPhone и из всех плейлистов. Закладки и счётчик прослушиваний тоже удалятся. Отменить нельзя.", "\(artist)", "\(track.displayTitle)")
         }
-        return "Файлов: \(pendingDelete.count). Они будут удалены с iPhone и из всех плейлистов вместе с закладками и счётчиками. Отменить нельзя."
+        return tr("Файлов: %@. Они будут удалены с iPhone и из всех плейлистов вместе с закладками и счётчиками. Отменить нельзя.", "\(pendingDelete.count)")
     }
 
     private func performDelete() {
@@ -493,7 +493,7 @@ struct ContentView: View {
                 deleted += 1
             }
         }
-        showToast(deleted == tracks.count ? "Удалено: \(deleted)" : "Удалено \(deleted) из \(tracks.count), подробности в журнале")
+        showToast(deleted == tracks.count ? tr("Удалено: %@", "\(deleted)") : tr("Удалено %@ из %@, подробности в журнале", "\(deleted)", "\(tracks.count)"))
     }
 
     /// Следующее окно открываем после закрытия текущего листа.

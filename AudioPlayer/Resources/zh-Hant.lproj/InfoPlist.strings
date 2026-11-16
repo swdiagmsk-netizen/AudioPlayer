@@ -1,0 +1,5 @@
+/* PlayMyDisk — описания разрешений (zh-Hant) */
+
+"NSMicrophoneUsageDescription" = "需要使用麥克風來辨識附近正在播放的歌曲。";
+"NSLocalNetworkUsageDescription" = "需要取用區域網路，才能透過 Wi-Fi 從電腦接收音樂。";
+"CFBundleDisplayName" = "PlayMyDisk";

@@ -1,0 +1,5 @@
+/* PlayMyDisk — описания разрешений (ja) */
+
+"NSMicrophoneUsageDescription" = "近くで流れている曲を認識するためにマイクを使用します。";
+"NSLocalNetworkUsageDescription" = "コンピュータから Wi-Fi で音楽を受信するためにローカルネットワークを使用します。";
+"CFBundleDisplayName" = "PlayMyDisk";

@@ -26,17 +26,17 @@ struct FileActionsSheet: View {
                     actionRow(
                         icon: track.isSuper ? "heart.fill" : "heart",
                         iconColor: Palette.heart,
-                        title: track.isSuper ? "Убрать из «Супер!»" : "Супер!"
+                        title: track.isSuper ? tr("Убрать из «Супер!»") : tr("Супер!")
                     ) {
                         onToggleSuper()
                     }
 
-                    actionRow(icon: "pencil", iconColor: palette.text, title: "Изменить теги и имя файла") {
+                    actionRow(icon: "pencil", iconColor: palette.text, title: tr("Изменить теги и имя файла")) {
                         dismiss()
                         onEditTags()
                     }
 
-                    actionRow(icon: "envelope", iconColor: palette.text, title: "Отправить по почте", subtitle: "Файл во вложении") {
+                    actionRow(icon: "envelope", iconColor: palette.text, title: tr("Отправить по почте"), subtitle: tr("Файл во вложении")) {
                         dismiss()
                         onMail()
                     }
@@ -45,8 +45,8 @@ struct FileActionsSheet: View {
                         rowLabel(
                             icon: "square.and.arrow.up",
                             iconColor: palette.text,
-                            title: "Поделиться файлом",
-                            subtitle: "AirDrop на другое устройство, мессенджеры и другое"
+                            title: tr("Поделиться файлом"),
+                            subtitle: tr("AirDrop на другое устройство, мессенджеры и другое")
                         )
                     }
                     .buttonStyle(.plain)
@@ -55,27 +55,27 @@ struct FileActionsSheet: View {
                     actionRow(
                         icon: "globe",
                         iconColor: palette.text,
-                        title: "Найти в интернете",
-                        subtitle: "Поиск: «\(searchQuery)»"
+                        title: tr("Найти в интернете"),
+                        subtitle: tr("Поиск: «%@»", "\(searchQuery)")
                     ) {
                         if let url = AppSettings.searchURL(for: searchQuery) {
                             openURL(url)
                         }
                     }
 
-                    actionRow(icon: "text.badge.plus", iconColor: palette.text, title: "Добавить в плейлист…") {
+                    actionRow(icon: "text.badge.plus", iconColor: palette.text, title: tr("Добавить в плейлист…")) {
                         dismiss()
                         onAddToPlaylist()
                     }
 
                     if entry != nil {
-                        actionRow(icon: "minus.circle", iconColor: palette.text, title: "Убрать из этого плейлиста") {
+                        actionRow(icon: "minus.circle", iconColor: palette.text, title: tr("Убрать из этого плейлиста")) {
                             onRemoveFromPlaylist()
                             dismiss()
                         }
                     }
 
-                    actionRow(icon: "trash", iconColor: Palette.danger, title: "Удалить с устройства…", titleColor: Palette.danger) {
+                    actionRow(icon: "trash", iconColor: Palette.danger, title: tr("Удалить с устройства…"), titleColor: Palette.danger) {
                         dismiss()
                         onDelete()
                     }
@@ -114,7 +114,7 @@ struct FileActionsSheet: View {
     }
 
     private var details: String {
-        let artist = track.artist.isEmpty ? "Неизвестный исполнитель" : track.artist
+        let artist = track.artist.isEmpty ? tr("Неизвестный исполнитель") : track.artist
         return "\(artist) · \(TimeText.format(track.duration)) · ▶ \(track.playCount)"
     }
 
@@ -182,8 +182,8 @@ struct AddToPlaylistSheet: View {
             List {
                 Section {
                     HStack {
-                        TextField("Новый плейлист", text: $newName)
-                        Button("Создать") {
+                        TextField(tr("Новый плейлист"), text: $newName)
+                        Button(tr("Создать")) {
                             if let playlist = lists.createPlaylist(named: newName) {
                                 add(to: playlist)
                             }
@@ -191,9 +191,9 @@ struct AddToPlaylistSheet: View {
                         .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
-                Section("Мои плейлисты") {
+                Section(tr("Мои плейлисты")) {
                     if lists.playlists.isEmpty {
-                        Text("Плейлистов пока нет")
+                        Text(tr("Плейлистов пока нет"))
                             .foregroundStyle(.secondary)
                     }
                     ForEach(lists.playlists, id: \.uid) { playlist in
@@ -203,11 +203,11 @@ struct AddToPlaylistSheet: View {
                     }
                 }
             }
-            .navigationTitle(tracks.count == 1 ? "Добавить трек" : "Добавить треки: \(tracks.count)")
+            .navigationTitle(tracks.count == 1 ? tr("Добавить трек") : tr("Добавить треки: %@", "\(tracks.count)"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(tr("Отмена")) { dismiss() }
                 }
             }
         }
@@ -219,7 +219,7 @@ struct AddToPlaylistSheet: View {
         let duplicates = lists.add(tracks, to: playlist)
         let added = tracks.count - duplicates.count
         if added > 0 {
-            onDone("Добавлено в «\(playlist.name)»: \(added)")
+            onDone(tr("Добавлено в «%@»: %@", "\(playlist.name)", "\(added)"))
         }
         dismiss()
         if !duplicates.isEmpty {

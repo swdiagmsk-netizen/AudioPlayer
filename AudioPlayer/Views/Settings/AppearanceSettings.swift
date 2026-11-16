@@ -2,37 +2,49 @@ import SwiftUI
 
 /// Языки интерфейса.
 enum LanguageOption {
-    static let all: [(code: String, name: String, note: String)] = [
-        ("en", "English", "по умолчанию"),
-        ("ru", "Русский", ""),
-        ("zh-Hant", "繁體中文", "китайский традиционный"),
-        ("ja", "日本語", "японский"),
-        ("es", "Español", "испанский"),
-        ("de", "Deutsch", "немецкий"),
-        ("fr", "Français", "французский")
-    ]
+    /// Название языка на нём самом и подпись на текущем языке интерфейса
+    /// (подпись скрывается, если совпадает с названием).
+    static var all: [(code: String, name: String, note: String)] {
+        let list: [(String, String, String)] = [
+            ("en", "English", tr("английский")),
+            ("ru", "Русский", tr("Русский")),
+            ("zh-Hant", "繁體中文", tr("китайский традиционный")),
+            ("ja", "日本語", tr("японский")),
+            ("es", "Español", tr("испанский")),
+            ("de", "Deutsch", tr("немецкий")),
+            ("fr", "Français", tr("французский")),
+            ("pt", "Português", tr("португальский")),
+            ("hi", "हिन्दी", tr("хинди")),
+            ("ar", "العربية", tr("арабский")),
+            ("bn", "বাংলা", tr("бенгальский")),
+            ("id", "Bahasa Indonesia", tr("индонезийский"))
+        ]
+        return list.map { code, name, note in
+            (code, name, note.lowercased() == name.lowercased() ? "" : note)
+        }
+    }
 
     static func name(for code: String) -> String {
         all.first { $0.code == code }?.name ?? "English"
     }
 
-    /// Язык приложения задаётся независимо от языка iPhone и применяется после перезапуска.
+    /// Язык приложения задаётся независимо от языка iPhone и применяется сразу.
     static func apply(_ code: String) {
-        UserDefaults.standard.set([code], forKey: "AppleLanguages")
+        AppLanguage.apply(code)
     }
 }
 
 /// Скины.
 enum SkinOption {
-    static let all: [(id: String, name: String, description: String)] = [
-        ("classic", "Классика", "ЖК-дисплей, визуализатор, компактный список"),
-        ("modern", "Minimalist Modern", "Размытая обложка, спектр вокруг обложки"),
-        ("retro", "Retro Cassette / Винил", "Катушки кассеты или пластинка, стрелочные приборы"),
-        ("car", "Car Mode", "Крупные кнопки и шрифт")
-    ]
+    static var all: [(id: String, name: String, description: String)] { [
+        ("classic", tr("Классика"), tr("ЖК-дисплей, визуализатор, компактный список")),
+        ("modern", "Minimalist Modern", tr("Размытая обложка, спектр вокруг обложки")),
+        ("retro", tr("Retro Cassette / Винил"), tr("Катушки кассеты или пластинка, стрелочные приборы")),
+        ("car", "Car Mode", tr("Крупные кнопки и шрифт"))
+    ] }
 
     static func name(for id: String) -> String {
-        all.first { $0.id == id }?.name ?? "Классика"
+        all.first { $0.id == id }?.name ?? tr("Классика")
     }
 }
 
@@ -49,7 +61,6 @@ enum ColorPalette {
 
 struct LanguageSettingsView: View {
     @AppStorage(SettingsKeys.appLanguage) private var language = "en"
-    @State private var showRestart = false
 
     var body: some View {
         List {
@@ -57,9 +68,9 @@ struct LanguageSettingsView: View {
                 Button {
                     guard option.code != language else { return }
                     Haptics.select()
-                    language = option.code
+                    // Интерфейс перерисуется сразу на новом языке
                     LanguageOption.apply(option.code)
-                    showRestart = true
+                    language = option.code
                 } label: {
                     HStack {
                         Text(option.name)
@@ -79,11 +90,12 @@ struct LanguageSettingsView: View {
                 .accessibilityAddTraits(option.code == language ? .isSelected : [])
             }
         }
-        .navigationTitle("Язык")
-        .alert("Язык изменён", isPresented: $showRestart) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Закройте приложение (смахните его вверх в списке открытых) и откройте снова — интерфейс переключится.")
+        .navigationTitle(tr("Язык"))
+        .safeAreaInset(edge: .bottom) {
+            Text(tr("Запросы разрешений iOS и кнопка на экране блокировки сменят язык после перезапуска приложения."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding()
         }
     }
 }
@@ -109,35 +121,35 @@ struct AppearanceSettingsView: View {
     var body: some View {
         List {
             Section {
-                Picker("Тема", selection: $themeMode.withHaptic()) {
-                    Text("Авто").tag("auto")
-                    Text("Светлая").tag("light")
-                    Text("Тёмная").tag("dark")
+                Picker(tr("Тема"), selection: $themeMode.withHaptic()) {
+                    Text(tr("Авто")).tag("auto")
+                    Text(tr("Светлая")).tag("light")
+                    Text(tr("Тёмная")).tag("dark")
                 }
                 .pickerStyle(.segmented)
             } header: {
-                Text("Тема оформления")
+                Text(tr("Тема оформления"))
             } footer: {
                 Text(themeFooter)
             }
 
-            Section("Визуализатор") {
-                Picker("Вид", selection: $visualizer.withHaptic()) {
+            Section(tr("Визуализатор")) {
+                Picker(tr("Вид"), selection: $visualizer.withHaptic()) {
                     ForEach(VisualizerKind.allCases, id: \.rawValue) { kind in
                         Text(kind.title).tag(kind.rawValue)
                     }
                 }
                 .pickerStyle(.segmented)
                 if visualizer == VisualizerKind.lines.rawValue {
-                    colorRow(title: "Цвет линий", presets: linePresets, hex: $lineColorHex, showPalette: $showLinePalette)
+                    colorRow(title: tr("Цвет линий"), presets: linePresets, hex: $lineColorHex, showPalette: $showLinePalette)
                 }
             }
 
-            Section("Цвет акцента (кнопки)") {
-                colorRow(title: "Акцент", presets: accentPresets, hex: $accentHex, showPalette: $showAccentPalette)
+            Section(tr("Цвет акцента (кнопки)")) {
+                colorRow(title: tr("Акцент"), presets: accentPresets, hex: $accentHex, showPalette: $showAccentPalette)
             }
 
-            Section("Скин плеера") {
+            Section(tr("Скин плеера")) {
                 ForEach(SkinOption.all, id: \.id) { option in
                     Button {
                         Haptics.select()
@@ -159,18 +171,18 @@ struct AppearanceSettingsView: View {
                     .accessibilityAddTraits(option.id == skin ? .isSelected : [])
                 }
                 if skin == "retro" {
-                    Picker("Вид ретро", selection: $retroStyle.withHaptic()) {
-                        Text("Кассета").tag("cassette")
-                        Text("Винил").tag("vinyl")
+                    Picker(tr("Вид ретро"), selection: $retroStyle.withHaptic()) {
+                        Text(tr("Кассета")).tag("cassette")
+                        Text(tr("Винил")).tag("vinyl")
                     }
                     .pickerStyle(.segmented)
                 }
             }
 
-            Section("Свои цвета") {
-                ColorPicker("Фон", selection: hexBinding($backgroundHex, fallback: "#101215"), supportsOpacity: false)
-                ColorPicker("Текст", selection: hexBinding($textHex, fallback: "#ECEEF1"), supportsOpacity: false)
-                Button("Сбросить на стандартную тему") {
+            Section(tr("Свои цвета")) {
+                ColorPicker(tr("Фон"), selection: hexBinding($backgroundHex, fallback: "#101215"), supportsOpacity: false)
+                ColorPicker(tr("Текст"), selection: hexBinding($textHex, fallback: "#ECEEF1"), supportsOpacity: false)
+                Button(tr("Сбросить на стандартную тему")) {
                     Haptics.tap()
                     accentHex = Palette.defaultAccentHex
                     lineColorHex = "#6CFF7E"
@@ -181,14 +193,14 @@ struct AppearanceSettingsView: View {
                 }
             }
         }
-        .navigationTitle("Внешний вид")
+        .navigationTitle(tr("Внешний вид"))
     }
 
     private var themeFooter: String {
         switch themeMode {
-        case "light": return "Всегда светлая."
-        case "dark": return "Всегда тёмная."
-        default: return "Следует за настройкой iPhone: днём светлая, ночью тёмная."
+        case "light": return tr("Всегда светлая.")
+        case "dark": return tr("Всегда тёмная.")
+        default: return tr("Следует за настройкой iPhone: днём светлая, ночью тёмная.")
         }
     }
 
@@ -211,7 +223,7 @@ struct AppearanceSettingsView: View {
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Палитра: \(title)")
+            .accessibilityLabel(tr("Палитра: %@", "\(title)"))
         }
         if showPalette.wrappedValue {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 8), spacing: 6) {
@@ -222,7 +234,7 @@ struct AppearanceSettingsView: View {
                     }
                 }
             }
-            ColorPicker("Любой цвет…", selection: hexBinding(hex, fallback: "#FF8A1F"), supportsOpacity: false)
+            ColorPicker(tr("Любой цвет…"), selection: hexBinding(hex, fallback: "#FF8A1F"), supportsOpacity: false)
         }
     }
 
@@ -234,7 +246,7 @@ struct AppearanceSettingsView: View {
                 .overlay(Circle().stroke(selected ? Color.primary : Color.clear, lineWidth: 3))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Цвет \(value)")
+        .accessibilityLabel(tr("Цвет %@", "\(value)"))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 

@@ -50,7 +50,7 @@ final class WiFiTransferServer: @unchecked Sendable {
 
     private func tryNextPort() {
         guard !candidatePorts.isEmpty else {
-            publish(running: false, error: "Не удалось открыть порт 8080–8090")
+            publish(running: false, error: tr("Не удалось открыть порт 8080–8090"))
             return
         }
         let next = candidatePorts.removeFirst()

@@ -19,27 +19,27 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
-                    sectionLink("Язык", value: LanguageOption.name(for: language), icon: "character.bubble", tint: Color(hex: "#2F9BFF")) {
+                    sectionLink(tr("Язык"), value: LanguageOption.name(for: language), icon: "character.bubble", tint: Color(hex: "#2F9BFF")) {
                         LanguageSettingsView()
                     }
-                    sectionLink("Внешний вид", value: appearanceSummary, icon: "circle.lefthalf.filled", tint: Color(hex: "#8B5CF6")) {
+                    sectionLink(tr("Внешний вид"), value: appearanceSummary, icon: "circle.lefthalf.filled", tint: Color(hex: "#8B5CF6")) {
                         AppearanceSettingsView()
                     }
-                    sectionLink("Звук и воспроизведение", value: soundSummary, icon: "music.note", tint: Color(hex: "#FF8A1F")) {
+                    sectionLink(tr("Звук и воспроизведение"), value: soundSummary, icon: "music.note", tint: Color(hex: "#FF8A1F")) {
                         SoundSettingsView(container: container)
                     }
-                    sectionLink("Библиотека и плейлисты", value: "Плейлисты, ★ и ♥, дубликаты, счётчик", icon: "books.vertical", tint: Color(hex: "#22C55E")) {
+                    sectionLink(tr("Библиотека и плейлисты"), value: tr("Плейлисты, ★ и ♥, дубликаты, счётчик"), icon: "books.vertical", tint: Color(hex: "#22C55E")) {
                         LibrarySettingsView(container: container)
                     }
-                    sectionLink("Помощь", value: "Инструкция, письмо разработчику, друзьям", icon: "questionmark.circle", tint: Color(hex: "#14B8A6")) {
+                    sectionLink(tr("Помощь"), value: tr("Инструкция, письмо разработчику, друзьям"), icon: "questionmark.circle", tint: Color(hex: "#14B8A6")) {
                         HelpSettingsView()
                     }
-                    sectionLink("О приложении", value: "Версия, форматы, кэш обложек", icon: "info.circle", tint: Color(hex: "#5C6470")) {
+                    sectionLink(tr("О приложении"), value: tr("Версия, форматы, кэш обложек"), icon: "info.circle", tint: Color(hex: "#5C6470")) {
                         AboutSettingsView(container: container)
                     }
                 }
 
-                Section("Память") {
+                Section(tr("Память")) {
                     StorageInfoView()
                 }
 
@@ -52,11 +52,11 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Настройки")
+            .navigationTitle(tr("Настройки"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") {
+                    Button(tr("Готово")) {
                         Haptics.tap()
                         dismiss()
                     }
@@ -67,15 +67,15 @@ struct SettingsView: View {
     }
 
     private var appearanceSummary: String {
-        let theme = ["auto": "Авто", "light": "Светлая", "dark": "Тёмная"][themeMode] ?? "Авто"
+        let theme = ["auto": tr("Авто"), "light": tr("Светлая"), "dark": tr("Тёмная")][themeMode] ?? tr("Авто")
         let skinName = SkinOption.name(for: skin)
         let viz = (VisualizerKind(rawValue: visualizer) ?? .bars).title
         return "\(theme) · \(skinName) · \(viz)"
     }
 
     private var soundSummary: String {
-        func onOff(_ value: Bool) -> String { value ? "вкл" : "выкл" }
-        return "Нормализация \(onOff(normalize)) · затухание \(onOff(fadeEnd)) · вибрация \(onOff(haptics))"
+        func onOff(_ value: Bool) -> String { value ? tr("вкл") : tr("выкл") }
+        return tr("Нормализация %@ · затухание %@ · вибрация %@", "\(onOff(normalize))", "\(onOff(fadeEnd))", "\(onOff(haptics))")
     }
 
     private func sectionLink<Destination: View>(
@@ -115,7 +115,7 @@ enum AppInfo {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
-        return "\(version) (сборка \(build))"
+        return tr("%@ (сборка %@)", "\(version)", "\(build)")
     }
 
     static let developerEmail = "swdiag.msk@gmail.com"

@@ -67,12 +67,12 @@ struct WiFiTransferView: View {
         List {
             Section {
                 if controller.address == nil && !controller.status.isRunning {
-                    Label("iPhone не подключён к Wi-Fi. Подключитесь к той же сети, что и компьютер.", systemImage: "wifi.exclamationmark")
+                    Label(tr("iPhone не подключён к Wi-Fi. Подключитесь к той же сети, что и компьютер."), systemImage: "wifi.exclamationmark")
                         .foregroundStyle(.orange)
                 }
                 if let url = controller.url {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Откройте в браузере на компьютере:")
+                        Text(tr("Откройте в браузере на компьютере:"))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text(url)
@@ -84,13 +84,13 @@ struct WiFiTransferView: View {
                     }
                     .padding(.vertical, 6)
                 } else if controller.status.isRunning {
-                    Text("Сервер запущен, но адрес в сети Wi-Fi не найден. Проверьте подключение к Wi-Fi.")
+                    Text(tr("Сервер запущен, но адрес в сети Wi-Fi не найден. Проверьте подключение к Wi-Fi."))
                         .foregroundStyle(.secondary)
                 }
                 if let error = controller.status.error {
                     Text(error).foregroundStyle(.red)
                 }
-                Button(controller.status.isRunning ? "Остановить" : "Запустить Wi-Fi-импорт") {
+                Button(controller.status.isRunning ? tr("Остановить") : tr("Запустить Wi-Fi-импорт")) {
                     Haptics.tap()
                     if controller.status.isRunning {
                         controller.stop()
@@ -100,18 +100,18 @@ struct WiFiTransferView: View {
                 }
                 .fontWeight(.semibold)
             } footer: {
-                Text("Не сворачивайте приложение, пока идёт передача: в фоне iOS остановит приём файлов.")
+                Text(tr("Не сворачивайте приложение, пока идёт передача: в фоне iOS остановит приём файлов."))
             }
 
-            Section("Как передать музыку") {
-                Text("1. Подключите iPhone и компьютер к одной сети Wi-Fi.")
-                Text("2. Нажмите «Запустить» и откройте показанный адрес в браузере на компьютере.")
-                Text("3. Введите PIN, выберите папку и перетащите файлы в окно браузера.")
+            Section(tr("Как передать музыку")) {
+                Text(tr("1. Подключите iPhone и компьютер к одной сети Wi-Fi."))
+                Text(tr("2. Нажмите «Запустить» и откройте показанный адрес в браузере на компьютере."))
+                Text(tr("3. Введите PIN, выберите папку и перетащите файлы в окно браузера."))
             }
             .font(.subheadline)
 
             if !controller.received.isEmpty {
-                Section("Принято (\(controller.received.count))") {
+                Section(tr("Принято (%@)", "\(controller.received.count)")) {
                     ForEach(Array(controller.received.enumerated()), id: \.offset) { _, name in
                         Label(name, systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.primary)
@@ -119,7 +119,7 @@ struct WiFiTransferView: View {
                 }
             }
         }
-        .navigationTitle("Wi-Fi-импорт")
+        .navigationTitle(tr("Wi-Fi-импорт"))
         .onDisappear {
             controller.stop()
         }

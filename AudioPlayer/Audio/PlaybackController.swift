@@ -156,7 +156,7 @@ final class PlaybackController {
             try engine.play()
         } catch {
             AppLogger.shared.log("audio", "Не удалось начать воспроизведение: \(error.localizedDescription)")
-            message = "Не удалось начать воспроизведение"
+            message = tr("Не удалось начать воспроизведение")
         }
         lastTickPosition = nil
         nowPlaying.updatePlayback(elapsed: engine.currentTime, rate: engine.rate, isPlaying: engine.isPlaying)
@@ -358,9 +358,9 @@ final class PlaybackController {
 
     private func skippedMessage(_ names: [String]) -> String {
         if names.count == 1 {
-            return "Пропущен файл, который нельзя воспроизвести: \(names[0])"
+            return tr("Пропущен файл, который нельзя воспроизвести: %@", "\(names[0])")
         }
-        return "Пропущено файлов, которые нельзя воспроизвести: \(names.count)"
+        return tr("Пропущено файлов, которые нельзя воспроизвести: %@", "\(names.count)")
     }
 
     /// Трек доиграл сам: учитываются таймер сна, «повтор одного», «повтор всех» и рандом.

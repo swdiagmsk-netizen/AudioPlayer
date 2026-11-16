@@ -1,0 +1,6 @@
+/* Кнопка «Распознать» (id) */
+
+"Распознать" = "Kenali";
+"Распознать песню" = "Kenali lagu";
+"Открывает PlayMyDisk и слушает, что играет рядом." = "Membuka PlayMyDisk dan mendengarkan musik yang diputar di dekat Anda.";
+"Открывает PlayMyDisk и запускает распознавание песни." = "Membuka PlayMyDisk dan mulai mengenali lagu.";

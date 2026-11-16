@@ -30,11 +30,11 @@ struct SleepTimerView: View {
                 .padding(16)
             }
             .background(palette.background)
-            .navigationTitle("Таймер сна")
+            .navigationTitle(tr("Таймер сна"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                    Button(tr("Готово")) { dismiss() }
                 }
             }
         }
@@ -44,7 +44,7 @@ struct SleepTimerView: View {
 
     private var display: some View {
         VStack(spacing: 4) {
-            Text(timer.isActive ? "ДО ПАУЗЫ ОСТАЛОСЬ" : "ТАЙМЕР ВЫКЛЮЧЕН")
+            Text(timer.isActive ? tr("ДО ПАУЗЫ ОСТАЛОСЬ") : tr("ТАЙМЕР ВЫКЛЮЧЕН"))
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(Palette.lcdDim)
             Text(displayText)
@@ -52,7 +52,7 @@ struct SleepTimerView: View {
                 .foregroundStyle(timer.isActive ? Palette.lcdText : Palette.lcdDim)
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
-            Text("ЗАТУХАНИЕ \(fadeSeconds) С")
+            Text(tr("ЗАТУХАНИЕ %@ С", "\(fadeSeconds)"))
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(Palette.lcdDim)
         }
@@ -65,11 +65,11 @@ struct SleepTimerView: View {
     private var displayText: String {
         switch timer.mode {
         case .endOfTrack:
-            return "КОНЕЦ ТРЕКА"
+            return tr("КОНЕЦ ТРЕКА")
         case .until:
             return clock(Int(timer.remaining.rounded(.up)))
         case .off:
-            if choice == 4 { return "КОНЕЦ ТРЕКА" }
+            if choice == 4 { return tr("КОНЕЦ ТРЕКА") }
             return clock(chosenMinutes * 60)
         }
     }
@@ -86,7 +86,7 @@ struct SleepTimerView: View {
     }
 
     private var options: some View {
-        let labels = ["15 мин", "30 мин", "45 мин", "60 мин", "До конца трека", "Своё…"]
+        let labels = [tr("15 мин"), tr("30 мин"), tr("45 мин"), tr("60 мин"), tr("До конца трека"), tr("Своё…")]
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
             ForEach(labels.indices, id: \.self) { index in
                 let isOn = index == choice
@@ -109,7 +109,7 @@ struct SleepTimerView: View {
 
     private var customTime: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Своё время")
+            Text(tr("Своё время"))
                 .font(.headline)
                 .foregroundStyle(palette.text)
             HStack(spacing: 10) {
@@ -119,18 +119,18 @@ struct SleepTimerView: View {
                     .font(.title3.weight(.semibold))
                     .frame(width: 64, height: 44)
                     .background(RoundedRectangle(cornerRadius: 10).fill(palette.button))
-                    .accessibilityLabel("Часы")
-                Text("ч").foregroundStyle(palette.secondaryText)
+                    .accessibilityLabel(tr("Часы"))
+                Text(tr("ч")).foregroundStyle(palette.secondaryText)
                 TextField("0", text: $minutesText)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
                     .font(.title3.weight(.semibold))
                     .frame(width: 64, height: 44)
                     .background(RoundedRectangle(cornerRadius: 10).fill(palette.button))
-                    .accessibilityLabel("Минуты")
-                Text("мин").foregroundStyle(palette.secondaryText)
+                    .accessibilityLabel(tr("Минуты"))
+                Text(tr("мин")).foregroundStyle(palette.secondaryText)
             }
-            Text("От 1 минуты до 12 часов.")
+            Text(tr("От 1 минуты до 12 часов."))
                 .font(.caption)
                 .foregroundStyle(palette.secondaryText)
         }
@@ -142,10 +142,10 @@ struct SleepTimerView: View {
     private var fade: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Плавное затухание перед паузой")
+                Text(tr("Плавное затухание перед паузой"))
                     .foregroundStyle(palette.text)
                 Spacer()
-                Text("\(fadeSeconds) с")
+                Text(tr("%@ с", "\(fadeSeconds)"))
                     .monospacedDigit()
                     .foregroundStyle(palette.secondaryText)
             }
@@ -155,7 +155,7 @@ struct SleepTimerView: View {
                 step: 5
             )
             .tint(palette.accent)
-            .accessibilityLabel("Длительность затухания")
+            .accessibilityLabel(tr("Длительность затухания"))
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 12).fill(palette.panel))
@@ -172,7 +172,7 @@ struct SleepTimerView: View {
                     timer.start(minutes: chosenMinutes)
                 }
             } label: {
-                Text(timer.isActive ? "Выключить таймер" : "Запустить таймер")
+                Text(timer.isActive ? tr("Выключить таймер") : tr("Запустить таймер"))
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(timer.isActive ? Palette.danger : palette.onAccent)
                     .frame(maxWidth: .infinity, minHeight: 54)
@@ -184,7 +184,7 @@ struct SleepTimerView: View {
                 Button {
                     timer.extend()
                 } label: {
-                    Text("+5 минут")
+                    Text(tr("+5 минут"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(palette.text)
                         .frame(maxWidth: .infinity, minHeight: 44)

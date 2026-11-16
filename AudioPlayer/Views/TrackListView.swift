@@ -185,31 +185,31 @@ struct TrackListView: View {
                 selectionBar(rows: rows)
             }
         }
-        .alert("Новая папка", isPresented: $showNewFolder) {
-            TextField("Название", text: $newFolderName)
-            Button("Создать") {
+        .alert(tr("Новая папка"), isPresented: $showNewFolder) {
+            TextField(tr("Название"), text: $newFolderName)
+            Button(tr("Создать")) {
                 if let folderPath, container.library.createFolder(named: newFolderName, in: folderPath) {
-                    onToast("Папка «\(newFolderName)» создана")
+                    onToast(tr("Папка «%@» создана", "\(newFolderName)"))
                 }
                 newFolderName = ""
             }
-            Button("Отмена", role: .cancel) {
+            Button(tr("Отмена"), role: .cancel) {
                 newFolderName = ""
             }
         }
         .alert(
-            "Удалить папку?",
+            tr("Удалить папку?"),
             isPresented: Binding(get: { folderToDelete != nil }, set: { if !$0 { folderToDelete = nil } }),
             presenting: folderToDelete
         ) { path in
-            Button("Удалить", role: .destructive) {
+            Button(tr("Удалить"), role: .destructive) {
                 Task {
                     _ = await container.library.deleteFolder(path)
                 }
             }
-            Button("Отмена", role: .cancel) {}
+            Button(tr("Отмена"), role: .cancel) {}
         } message: { path in
-            Text("Папка «\((path as NSString).lastPathComponent)» и все файлы в ней будут удалены с iPhone. Отменить нельзя.")
+            Text(tr("Папка «%@» и все файлы в ней будут удалены с iPhone. Отменить нельзя.", "\((path as NSString).lastPathComponent)"))
         }
     }
 
@@ -220,7 +220,7 @@ struct TrackListView: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(palette.secondaryText)
-                TextField("Название или № строки", text: $query)
+                TextField(tr("Название или № строки"), text: $query)
                     .focused($searchFocused)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -240,24 +240,24 @@ struct TrackListView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(palette.secondaryText)
                     }
-                    .accessibilityLabel("Очистить поиск")
+                    .accessibilityLabel(tr("Очистить поиск"))
                 }
             }
             .padding(.horizontal, 12)
             .frame(height: 40)
             .background(RoundedRectangle(cornerRadius: 10).fill(palette.button))
 
-            smallButton(systemImage: "shuffle", label: "Перемешать список") {
+            smallButton(systemImage: "shuffle", label: tr("Перемешать список")) {
                 lists.shuffleList(list)
-                onToast("Список перемешан")
+                onToast(tr("Список перемешан"))
             }
             .disabled(!list.isReorderable)
 
             Button {
                 lists.sortAlphabetically(list)
-                onToast("По алфавиту")
+                onToast(tr("По алфавиту"))
             } label: {
-                Text("А–Я")
+                Text(tr("А–Я"))
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(palette.text)
                     .frame(width: 44, height: 40)
@@ -265,7 +265,7 @@ struct TrackListView: View {
             }
             .buttonStyle(.plain)
             .disabled(!list.isReorderable)
-            .accessibilityLabel("Сортировать по алфавиту")
+            .accessibilityLabel(tr("Сортировать по алфавиту"))
 
             Button {
                 withAnimation {
@@ -280,7 +280,7 @@ struct TrackListView: View {
                     .background(RoundedRectangle(cornerRadius: 10).fill(palette.button))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(editMode.isEditing ? "Готово" : "Выбрать несколько")
+            .accessibilityLabel(editMode.isEditing ? tr("Готово") : tr("Выбрать несколько"))
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 6)
@@ -312,32 +312,32 @@ struct TrackListView: View {
 
     private func leftStatus(rows: [ListRowItem], found: [Int], cursor: Int) -> String {
         if !query.isEmpty {
-            if found.isEmpty { return "Ничего не найдено" }
-            return "Совпадений: \(found.count) · показано \(cursor + 1)-е"
+            if found.isEmpty { return tr("Ничего не найдено") }
+            return tr("Совпадений: %@ · показано %@-е", "\(found.count)", "\(cursor + 1)")
         }
         switch list {
-        case .hitParade: return "★ По популярности"
-        case .superList: return "♥ Супер!: \(rows.count)"
-        default: return "Треков: \(rows.count)"
+        case .hitParade: return tr("★ По популярности")
+        case .superList: return tr("♥ Супер!: %@", "\(rows.count)")
+        default: return tr("Треков: %@", "\(rows.count)")
         }
     }
 
     private func rightStatus(rows: [ListRowItem]) -> String {
         if list == .hitParade {
             let plays = rows.reduce(0) { $0 + $1.track.playCount }
-            return "Прослушиваний: \(plays)"
+            return tr("Прослушиваний: %@", "\(plays)")
         }
         let total = rows.reduce(0.0) { $0 + $1.track.duration }
-        return "Общее время \(TimeText.format(total))"
+        return tr("Общее время %@", "\(TimeText.format(total))")
     }
 
     private var emptyText: String {
         switch list {
-        case .hitParade: return "Здесь появятся треки, которые вы слушаете чаще всего"
-        case .superList: return "Нажмите ♥ у трека — он появится здесь"
-        case .all: return "Нажмите + чтобы добавить музыку"
-        case .folder: return "В этой папке нет музыки"
-        case .playlist: return "Плейлист пуст. Добавьте треки через ⚙ → «Добавить в плейлист»"
+        case .hitParade: return tr("Здесь появятся треки, которые вы слушаете чаще всего")
+        case .superList: return tr("Нажмите ♥ у трека — он появится здесь")
+        case .all: return tr("Нажмите + чтобы добавить музыку")
+        case .folder: return tr("В этой папке нет музыки")
+        case .playlist: return tr("Плейлист пуст. Добавьте треки через ⚙ → «Добавить в плейлист»")
         }
     }
 
@@ -347,7 +347,7 @@ struct TrackListView: View {
         HStack(spacing: 6) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
-                    Button("Музыка") { onOpenFolder("") }
+                    Button(tr("Музыка")) { onOpenFolder("") }
                     let parts = path.split(separator: "/").map(String.init)
                     ForEach(parts.indices, id: \.self) { index in
                         Image(systemName: "chevron.right")
@@ -368,7 +368,7 @@ struct TrackListView: View {
                     .foregroundStyle(palette.text)
                     .frame(width: 40, height: 32)
             }
-            .accessibilityLabel("Новая папка")
+            .accessibilityLabel(tr("Новая папка"))
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 6)
@@ -401,14 +401,14 @@ struct TrackListView: View {
             let isBooks = container.library.isAudiobookFolder(full)
             Button {
                 container.library.setAudiobookFolder(full, !isBooks)
-                onToast(isBooks ? "Отметка «Аудиокниги» снята" : "Папка помечена как «Аудиокниги»")
+                onToast(isBooks ? tr("Отметка «Аудиокниги» снята") : tr("Папка помечена как «Аудиокниги»"))
             } label: {
-                Label(isBooks ? "Снять отметку «Аудиокниги»" : "Пометить как «Аудиокниги»", systemImage: "book")
+                Label(isBooks ? tr("Снять отметку «Аудиокниги»") : tr("Пометить как «Аудиокниги»"), systemImage: "book")
             }
             Button(role: .destructive) {
                 folderToDelete = full
             } label: {
-                Label("Удалить папку с устройства…", systemImage: "trash")
+                Label(tr("Удалить папку с устройства…"), systemImage: "trash")
             }
         }
     }
@@ -438,15 +438,15 @@ struct TrackListView: View {
             Button {
                 onRequestDelete([item.track])
             } label: {
-                Label("Удалить", systemImage: "trash")
+                Label(tr("Удалить"), systemImage: "trash")
             }
             .tint(Palette.danger)
             if let entry = item.entry {
                 Button {
                     lists.remove([entry])
-                    onToast("Убрано из плейлиста")
+                    onToast(tr("Убрано из плейлиста"))
                 } label: {
-                    Label("Убрать", systemImage: "minus.circle")
+                    Label(tr("Убрать"), systemImage: "minus.circle")
                 }
                 .tint(.gray)
             }
@@ -455,37 +455,37 @@ struct TrackListView: View {
             Button {
                 lists.toggleSuper(item.track)
             } label: {
-                Label(item.track.isSuper ? "Убрать из «Супер!»" : "Супер!", systemImage: "heart")
+                Label(item.track.isSuper ? tr("Убрать из «Супер!»") : tr("Супер!"), systemImage: "heart")
             }
             Button {
                 onAddToPlaylist([item.track])
             } label: {
-                Label("Добавить в плейлист…", systemImage: "text.badge.plus")
+                Label(tr("Добавить в плейлист…"), systemImage: "text.badge.plus")
             }
             if let entry = item.entry {
                 Button {
                     lists.remove([entry])
-                    onToast("Убрано из плейлиста")
+                    onToast(tr("Убрано из плейлиста"))
                 } label: {
-                    Label("Убрать из этого плейлиста", systemImage: "minus.circle")
+                    Label(tr("Убрать из этого плейлиста"), systemImage: "minus.circle")
                 }
             }
             Button {
                 onMenu(item.track, item.entry)
             } label: {
-                Label("Все действия…", systemImage: "gearshape")
+                Label(tr("Все действия…"), systemImage: "gearshape")
             }
             Button(role: .destructive) {
                 onRequestDelete([item.track])
             } label: {
-                Label("Удалить с устройства…", systemImage: "trash")
+                Label(tr("Удалить с устройства…"), systemImage: "trash")
             }
         }
     }
 
     private func play(_ item: ListRowItem) {
         if item.track.isProtected || !item.track.isPlayable {
-            onToast("Файл защищён (DRM) и не может быть воспроизведён")
+            onToast(tr("Файл защищён (DRM) и не может быть воспроизведён"))
             return
         }
         let uids = rows.map(\.track.uid)
@@ -515,23 +515,23 @@ struct TrackListView: View {
     private func selectionBar(rows: [ListRowItem]) -> some View {
         let chosen = rows.filter { selection.contains($0.id) }
         return HStack(spacing: 10) {
-            Text("Выбрано: \(chosen.count)")
+            Text(tr("Выбрано: %@", "\(chosen.count)"))
                 .font(.footnote)
                 .foregroundStyle(palette.secondaryText)
             Spacer()
-            Button("В плейлист") {
+            Button(tr("В плейлист")) {
                 onAddToPlaylist(chosen.map(\.track))
             }
             .disabled(chosen.isEmpty)
             if case .playlist = list {
-                Button("Убрать") {
+                Button(tr("Убрать")) {
                     lists.remove(chosen.compactMap(\.entry))
-                    onToast("Убрано из плейлиста: \(chosen.count)")
+                    onToast(tr("Убрано из плейлиста: %@", "\(chosen.count)"))
                     selection = []
                 }
                 .disabled(chosen.isEmpty)
             }
-            Button("Удалить") {
+            Button(tr("Удалить")) {
                 onRequestDelete(chosen.map(\.track))
                 selection = []
             }

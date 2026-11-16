@@ -19,7 +19,7 @@ struct EqualizerView: View {
                     bands
                     preamp
                     buttons
-                    Text("Ручные настройки и свои пресеты сохраняются автоматически.")
+                    Text(tr("Ручные настройки и свои пресеты сохраняются автоматически."))
                         .font(.caption)
                         .foregroundStyle(palette.secondaryText)
                         .frame(maxWidth: .infinity)
@@ -28,14 +28,14 @@ struct EqualizerView: View {
                 .opacity(equalizer.isEnabled ? 1 : 0.45)
             }
             .background(palette.background)
-            .navigationTitle("Эквалайзер")
+            .navigationTitle(tr("Эквалайзер"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Готово") { dismiss() }
+                    Button(tr("Готово")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Toggle("Эквалайзер включён", isOn: Binding(
+                    Toggle(tr("Эквалайзер включён"), isOn: Binding(
                         get: { equalizer.isEnabled },
                         set: { equalizer.setEnabled($0) }
                     ))
@@ -43,13 +43,13 @@ struct EqualizerView: View {
                     .tint(palette.accent)
                 }
             }
-            .alert("Сохранить пресет", isPresented: $showSave) {
-                TextField("Название", text: $saveName)
-                Button("Сохранить") {
+            .alert(tr("Сохранить пресет"), isPresented: $showSave) {
+                TextField(tr("Название"), text: $saveName)
+                Button(tr("Сохранить")) {
                     equalizer.saveCurrent(as: saveName)
                     saveName = ""
                 }
-                Button("Отмена", role: .cancel) {
+                Button(tr("Отмена"), role: .cancel) {
                     saveName = ""
                 }
             }
@@ -59,11 +59,11 @@ struct EqualizerView: View {
     private var presets: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("ПРЕСЕТЫ")
+                Text(tr("ПРЕСЕТЫ"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(palette.secondaryText)
                 Spacer()
-                Button("+ Сохранить как свой") {
+                Button(tr("+ Сохранить как свой")) {
                     showSave = true
                 }
                 .font(.footnote.weight(.semibold))
@@ -75,7 +75,7 @@ struct EqualizerView: View {
                         Button {
                             equalizer.select(preset)
                         } label: {
-                            Text(preset.name)
+                            Text(tr(preset.name))
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(isOn ? palette.onAccent : palette.text)
                                 .padding(.horizontal, 14)
@@ -93,9 +93,9 @@ struct EqualizerView: View {
     private var bands: some View {
         VStack(spacing: 6) {
             HStack {
-                Text("+12 дБ")
+                Text(tr("+12 дБ"))
                 Spacer()
-                Text(equalizer.presetName.uppercased())
+                Text(tr(equalizer.presetName).uppercased())
             }
             .font(.system(size: 11, design: .monospaced))
             .foregroundStyle(Palette.lcdDim)
@@ -118,8 +118,8 @@ struct EqualizerView: View {
                         .rotationEffect(.degrees(-90))
                         .frame(width: 180)
                         .frame(width: 30, height: 180)
-                        .accessibilityLabel("Полоса \(labels[index]) герц")
-                        .accessibilityValue("\(format(equalizer.gains[index])) децибел")
+                        .accessibilityLabel(tr("Полоса %@ герц", "\(labels[index])"))
+                        .accessibilityValue(tr("%@ децибел", "\(format(equalizer.gains[index]))"))
                         Text(labels[index])
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(palette.secondaryText)
@@ -129,9 +129,9 @@ struct EqualizerView: View {
             }
 
             HStack {
-                Text("−12 дБ")
+                Text(tr("−12 дБ"))
                 Spacer()
-                Text("Гц")
+                Text(tr("Гц"))
             }
             .font(.system(size: 11, design: .monospaced))
             .foregroundStyle(Palette.lcdDim)
@@ -144,10 +144,10 @@ struct EqualizerView: View {
     private var preamp: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Предусилитель")
+                Text(tr("Предусилитель"))
                     .foregroundStyle(palette.text)
                 Spacer()
-                Text("\(format(equalizer.preamp)) дБ")
+                Text(tr("%@ дБ", "\(format(equalizer.preamp))"))
                     .monospacedDigit()
                     .foregroundStyle(palette.secondaryText)
             }
@@ -159,8 +159,8 @@ struct EqualizerView: View {
                 in: -12...6
             )
             .tint(palette.accent)
-            .accessibilityLabel("Предусилитель")
-            Text("Если поднимаете много полос — убавьте предусилитель, чтобы не было хрипа.")
+            .accessibilityLabel(tr("Предусилитель"))
+            Text(tr("Если поднимаете много полос — убавьте предусилитель, чтобы не было хрипа."))
                 .font(.caption)
                 .foregroundStyle(palette.secondaryText)
         }
@@ -170,13 +170,13 @@ struct EqualizerView: View {
 
     private var buttons: some View {
         HStack(spacing: 8) {
-            Button("Сбросить (Flat)") {
+            Button(tr("Сбросить (Flat)")) {
                 equalizer.resetFlat()
             }
             .frame(maxWidth: .infinity, minHeight: 44)
             .background(RoundedRectangle(cornerRadius: 10).stroke(palette.line))
 
-            Button("Удалить свой пресет") {
+            Button(tr("Удалить свой пресет")) {
                 equalizer.deleteCurrentUserPreset()
             }
             .foregroundStyle(equalizer.currentPresetIsUser ? Palette.danger : palette.secondaryText)

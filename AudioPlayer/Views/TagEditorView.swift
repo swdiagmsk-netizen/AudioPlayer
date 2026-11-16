@@ -32,11 +32,11 @@ struct TagEditorView: View {
                             .frame(width: 96, height: 96)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Обложка").font(.headline)
+                            Text(tr("Обложка")).font(.headline)
                             PhotosPicker(selection: $photoItem, matching: .images) {
-                                Text("Выбрать фото")
+                                Text(tr("Выбрать фото"))
                             }
-                            Button("Удалить", role: .destructive) {
+                            Button(tr("Удалить"), role: .destructive) {
                                 Haptics.select()
                                 artworkChange = .remove
                                 previewImage = nil
@@ -47,9 +47,9 @@ struct TagEditorView: View {
                     }
                 }
 
-                Section("Файл") {
+                Section(tr("Файл")) {
                     HStack {
-                        TextField("Имя файла", text: $baseName)
+                        TextField(tr("Имя файла"), text: $baseName)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                         Text("." + fileExtension)
@@ -58,48 +58,48 @@ struct TagEditorView: View {
                 }
 
                 Section {
-                    field("Название", $tags.title)
-                    field("Исполнитель", $tags.artist)
-                    field("Альбом", $tags.album)
-                    field("Исполнитель альбома", $tags.albumArtist)
-                    field("Жанр", $tags.genre)
-                    field("Год", $tags.year, keyboard: .numberPad)
-                    field("Номер трека", $tags.trackNumber, keyboard: .numberPad)
-                    field("Композитор", $tags.composer)
-                    field("Комментарий", $tags.comment)
+                    field(tr("Название"), $tags.title)
+                    field(tr("Исполнитель"), $tags.artist)
+                    field(tr("Альбом"), $tags.album)
+                    field(tr("Исполнитель альбома"), $tags.albumArtist)
+                    field(tr("Жанр"), $tags.genre)
+                    field(tr("Год"), $tags.year, keyboard: .numberPad)
+                    field(tr("Номер трека"), $tags.trackNumber, keyboard: .numberPad)
+                    field(tr("Композитор"), $tags.composer)
+                    field(tr("Комментарий"), $tags.comment)
                 } header: {
-                    Text("Теги")
+                    Text(tr("Теги"))
                 } footer: {
                     if !writesToFile {
-                        Text("Для формата \(fileExtension.uppercased()) теги сохраняются в приложении, в файл не записываются.")
+                        Text(tr("Для формата %@ теги сохраняются в приложении, в файл не записываются.", "\(fileExtension.uppercased())"))
                     }
                 }
 
-                Section("Сведения") {
-                    LabeledContent("Формат", value: track.formatName)
-                    LabeledContent("Битрейт / частота", value: technicalLine)
-                    LabeledContent("Длительность", value: TimeText.format(track.duration))
-                    LabeledContent("Размер", value: ByteCountFormatter.string(fromByteCount: track.fileSize, countStyle: .file))
-                    LabeledContent("Папка", value: track.folderPath.isEmpty ? "Музыка" : "Музыка › " + track.folderPath.replacingOccurrences(of: "/", with: " › "))
-                    LabeledContent("Прослушиваний", value: "\(track.playCount)")
+                Section(tr("Сведения")) {
+                    LabeledContent(tr("Формат"), value: track.formatName)
+                    LabeledContent(tr("Битрейт / частота"), value: technicalLine)
+                    LabeledContent(tr("Длительность"), value: TimeText.format(track.duration))
+                    LabeledContent(tr("Размер"), value: ByteCountFormatter.string(fromByteCount: track.fileSize, countStyle: .file))
+                    LabeledContent(tr("Папка"), value: track.folderPath.isEmpty ? tr("Музыка") : tr("Музыка › ") + track.folderPath.replacingOccurrences(of: "/", with: " › "))
+                    LabeledContent(tr("Прослушиваний"), value: "\(track.playCount)")
                 }
             }
             .disabled(isSaving)
             .overlay {
                 if isSaving {
-                    ProgressView("Сохранение…")
+                    ProgressView(tr("Сохранение…"))
                         .padding(20)
                         .background(RoundedRectangle(cornerRadius: 12).fill(.regularMaterial))
                 }
             }
-            .navigationTitle("Теги файла")
+            .navigationTitle(tr("Теги файла"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(tr("Отмена")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Сохранить") {
+                    Button(tr("Сохранить")) {
                         Haptics.tap()
                         Task { await save() }
                     }
@@ -111,7 +111,7 @@ struct TagEditorView: View {
                 guard let item else { return }
                 Task { await loadPhoto(item) }
             }
-            .alert("Не удалось сохранить", isPresented: Binding(get: { errorText != nil }, set: { if !$0 { errorText = nil } })) {
+            .alert(tr("Не удалось сохранить"), isPresented: Binding(get: { errorText != nil }, set: { if !$0 { errorText = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorText ?? "")
@@ -132,13 +132,13 @@ struct TagEditorView: View {
                     .font(.system(size: 34))
                     .foregroundStyle(palette.secondaryText)
             }
-            .accessibilityLabel("Обложка отсутствует")
+            .accessibilityLabel(tr("Обложка отсутствует"))
         }
     }
 
     private func field(_ title: String, _ value: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
         LabeledContent(title) {
-            TextField(title, text: value, prompt: Text("не указан"))
+            TextField(title, text: value, prompt: Text(tr("не указан")))
                 .multilineTextAlignment(.trailing)
                 .keyboardType(keyboard)
         }
@@ -146,8 +146,8 @@ struct TagEditorView: View {
 
     private var technicalLine: String {
         var parts: [String] = []
-        if track.bitrateKbps > 0 { parts.append("\(track.bitrateKbps) кбит/с") }
-        if track.sampleRate > 0 { parts.append(String(format: "%.1f кГц", track.sampleRate / 1000)) }
+        if track.bitrateKbps > 0 { parts.append(tr("%@ кбит/с", "\(track.bitrateKbps)")) }
+        if track.sampleRate > 0 { parts.append(tr("%@ кГц", String(format: "%.1f", track.sampleRate / 1000))) }
         return parts.isEmpty ? "—" : parts.joined(separator: " · ")
     }
 
@@ -171,14 +171,14 @@ struct TagEditorView: View {
 
     private func loadPhoto(_ item: PhotosPickerItem) async {
         guard let data = try? await item.loadTransferable(type: Data.self) else {
-            errorText = "Не удалось загрузить фото"
+            errorText = tr("Не удалось загрузить фото")
             return
         }
         let jpeg = await Task.detached(priority: .userInitiated) {
             ArtworkCache.jpegData(from: data, maxPixel: 1000)
         }.value
         guard let jpeg, let image = UIImage(data: jpeg) else {
-            errorText = "Не удалось прочитать фото"
+            errorText = tr("Не удалось прочитать фото")
             return
         }
         artworkChange = .replace(jpeg)
@@ -194,7 +194,7 @@ struct TagEditorView: View {
         let newBase = baseName.trimmingCharacters(in: .whitespacesAndNewlines)
         if newBase != (track.fileName as NSString).deletingPathExtension {
             guard !newBase.isEmpty, library.renameFile(of: track, toBaseName: newBase) else {
-                errorText = "Не удалось переименовать файл: имя пустое, содержит «/» или такой файл уже есть."
+                errorText = tr("Не удалось переименовать файл: имя пустое, содержит «/» или такой файл уже есть.")
                 return
             }
         }
@@ -215,11 +215,11 @@ struct TagEditorView: View {
 
         switch result {
         case .writtenToFile:
-            onDone("Теги сохранены в файл")
+            onDone(tr("Теги сохранены в файл"))
         case .appOnly:
-            onDone("Сохранено в приложении, в файл не записывается")
+            onDone(tr("Сохранено в приложении, в файл не записывается"))
         case .failed(let reason):
-            onDone("В файл записать не удалось (\(reason)). Сохранено в приложении.")
+            onDone(tr("В файл записать не удалось (%@). Сохранено в приложении.", "\(reason)"))
         }
         dismiss()
     }

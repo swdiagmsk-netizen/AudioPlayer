@@ -30,7 +30,7 @@ enum ChapterLoader {
                 title = value.trimmingCharacters(in: .whitespacesAndNewlines)
             }
             if title.isEmpty {
-                title = "Глава \(index + 1)"
+                title = tr("Глава %@", "\(index + 1)")
             }
             let end = length.isFinite ? start + length : start
             result.append(ChapterInfo(id: index, title: title, start: start, end: end))

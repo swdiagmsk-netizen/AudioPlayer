@@ -1,0 +1,6 @@
+/* Кнопка «Распознать» (fr) */
+
+"Распознать" = "Reconnaître";
+"Распознать песню" = "Reconnaître la chanson";
+"Открывает PlayMyDisk и слушает, что играет рядом." = "Ouvre PlayMyDisk et écoute ce qui joue à proximité.";
+"Открывает PlayMyDisk и запускает распознавание песни." = "Ouvre PlayMyDisk et lance la reconnaissance de la chanson.";

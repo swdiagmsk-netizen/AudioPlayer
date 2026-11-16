@@ -69,7 +69,7 @@ enum MusicRecognizer {
                 case .match(let match):
                     if let item = match.mediaItems.first {
                         return .match(RecognizedSong(
-                            title: item.title ?? "Без названия",
+                            title: item.title ?? tr("Без названия"),
                             artist: item.artist ?? "",
                             artworkURL: item.artworkURL,
                             webURL: item.webURL
@@ -118,7 +118,7 @@ enum MusicRecognizer {
         do {
             signature = try SHSignature(dataRepresentation: signatureData)
         } catch {
-            return .failed("Фрагмент повреждён: \(error.localizedDescription)")
+            return .failed(tr("Фрагмент повреждён: %@", "\(error.localizedDescription)"))
         }
         let session = SHSession()
         let result = await session.result(from: signature)
@@ -126,7 +126,7 @@ enum MusicRecognizer {
         case .match(let match):
             guard let item = match.mediaItems.first else { return .noMatch }
             return .match(RecognizedSong(
-                title: item.title ?? "Без названия",
+                title: item.title ?? tr("Без названия"),
                 artist: item.artist ?? "",
                 artworkURL: item.artworkURL,
                 webURL: item.webURL
