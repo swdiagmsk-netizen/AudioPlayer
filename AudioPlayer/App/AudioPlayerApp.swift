@@ -26,6 +26,10 @@ struct AudioPlayerApp: App {
             switch newPhase {
             case .active:
                 container.playback.setVisualizerActive(true)
+                container.recognition.processPendingIfOnline()
+                if RecognitionRequest.consume() {
+                    container.recognition.start()
+                }
                 // Вернулись в приложение — файлы могли добавить через «Файлы»
                 if container.didFinishLaunchTasks {
                     Task {

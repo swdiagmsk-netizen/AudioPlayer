@@ -582,11 +582,14 @@ final class PlaybackController {
     /// Восстановление после запуска. Вызывать после первого сканирования библиотеки.
     /// В режиме «Продолжить» музыка играет с сохранённой секунды (если играла при закрытии),
     /// в режиме «Ничего не воспроизводить» — трек открыт, но стоит на паузе.
-    func restoreOnLaunch() {
-        guard currentTrack == nil, let saved = PlaybackStateStore.load() else { return }
+    /// Восстанавливает очередь и позицию. `allowAutoplay: false` — не запускать звук
+    /// (идёт распознавание). Возвращает true, если по настройкам музыка должна была заиграть.
+    @discardableResult
+    func restoreOnLaunch(allowAutoplay: Bool = true) -> Bool {
+        guard currentTrack == nil, let saved = PlaybackStateStore.load() else { return false }
         var restored = saved.queue
         let existing = restored.items.filter { library.track(withUID: $0) != nil }
-        guard !existing.isEmpty else { return }
+        guard !existing.isEmpty else { return false }
 
         var position = saved.position
         if let current = restored.currentUID, existing.contains(current) {
@@ -599,9 +602,11 @@ final class PlaybackController {
         queue = restored
         contextKey = saved.contextKey
 
-        let autoplay = AppSettings.startContinues && saved.wasPlaying
+        let wanted = AppSettings.startContinues && saved.wasPlaying
+        let autoplay = wanted && allowAutoplay
         if loadSkippingUnplayable(first: queue.currentUID, position: position, autoplay: autoplay, forward: true) {
             AppLogger.shared.log("state", "Восстановлено воспроизведение: позиция \(Int(position)) с, автозапуск: \(autoplay)")
         }
+        return wanted
     }
 }

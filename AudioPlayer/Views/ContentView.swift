@@ -202,6 +202,33 @@ struct ContentView: View {
             RecognitionSheet(controller: container.recognition)
                 .environment(\.palette, palette)
         }
+        .alert(
+            "Нашлась песня из отложенных",
+            isPresented: Binding(
+                get: { !container.recognition.announcements.isEmpty && !container.recognition.isPresented },
+                set: { if !$0 { container.recognition.dismissAnnouncement() } }
+            )
+        ) {
+            Button("Копировать") {
+                if let song = container.recognition.announcements.first {
+                    UIPasteboard.general.string = song.displayLine
+                    Haptics.select()
+                }
+                container.recognition.dismissAnnouncement()
+            }
+            Button("ОК", role: .cancel) {
+                container.recognition.dismissAnnouncement()
+            }
+        } message: {
+            Text(container.recognition.announcements.first?.displayLine ?? "")
+        }
+        // Кнопка «Распознать» на экране блокировки открывает приложение и присылает запрос
+        .onReceive(NotificationCenter.default.publisher(for: RecognitionRequest.notification)) { _ in
+            startRequestedRecognition()
+        }
+        .onAppear {
+            startRequestedRecognition()
+        }
         .sheet(isPresented: $showSleepTimer) {
             SleepTimerView(timer: playback.sleepTimer)
                 .environment(\.palette, palette)
@@ -394,6 +421,11 @@ struct ContentView: View {
         return text
     }
 
+    private func startRequestedRecognition() {
+        guard RecognitionRequest.consume() else { return }
+        container.recognition.start()
+    }
+
     private func showDuplicate(_ info: DuplicateInfo?) {
         guard let info else { return }
         selectedList = ListID(key: info.listKey) ?? .all
@@ -407,8 +439,8 @@ struct ContentView: View {
             showToast("Почта на iPhone не настроена — используйте «Поделиться файлом»")
             return
         }
-        guard track.fileSize <= 100_000_000 else {
-            showToast("Файл больше 100 МБ — используйте «Поделиться файлом» (AirDrop)")
+        guard track.fileSize <= 20 * 1024 * 1024 else {
+            showToast("Файл больше 20 МБ — используйте «Поделиться файлом» (AirDrop)")
             return
         }
         mailTarget = track

@@ -211,6 +211,21 @@ struct LibrarySettingsView: View {
                     WiFiTransferView(controller: container.wifi)
                         .onAppear { Haptics.select() }
                 }
+                NavigationLink {
+                    RecognitionHistoryView(controller: container.recognition)
+                        .onAppear { Haptics.select() }
+                } label: {
+                    HStack {
+                        Text("Распознанные песни")
+                        Spacer()
+                        let waiting = container.recognition.store.pending.count
+                        if waiting > 0 {
+                            Text("ждут сети: \(waiting)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
 
             Section("Найти в интернете") {

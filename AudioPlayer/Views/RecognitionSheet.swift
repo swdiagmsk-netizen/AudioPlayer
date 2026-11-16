@@ -1,12 +1,13 @@
 import SwiftUI
 import UIKit
 
-/// Экран распознавания: «Слушаю…», результат, «не найдено» или запасной вариант.
+/// Экран распознавания: «Слушаю…», результат, «не найдено», «нет связи» или запасной вариант.
 struct RecognitionSheet: View {
     let controller: RecognitionController
 
     @Environment(\.palette) private var palette
     @Environment(\.openURL) private var openURL
+    @State private var copied = false
 
     var body: some View {
         VStack(spacing: 18) {
@@ -26,7 +27,7 @@ struct RecognitionSheet: View {
         case .idle:
             EmptyView()
 
-        case .listening:
+        case .listening(let since):
             Image(systemName: RecognizeIcon.name)
                 .font(.system(size: 64))
                 .foregroundStyle(palette.accent)
@@ -35,7 +36,13 @@ struct RecognitionSheet: View {
             Text("Слушаю…")
                 .font(.title2.bold())
                 .foregroundStyle(palette.text)
-            Text("Поднесите iPhone ближе к источнику звука. До 15 секунд.")
+            TimelineView(.periodic(from: since, by: 1)) { context in
+                let seconds = max(0, Int(context.date.timeIntervalSince(since)))
+                Text(String(format: "%d:%02d из 1:00", seconds / 60, seconds % 60))
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(palette.secondaryText)
+            }
+            Text("Поднесите iPhone ближе к источнику звука.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(palette.secondaryText)
@@ -52,43 +59,51 @@ struct RecognitionSheet: View {
             .frame(width: 160, height: 160)
             .background(palette.secondaryText.opacity(0.15))
             .clipShape(RoundedRectangle(cornerRadius: 14))
-            VStack(spacing: 4) {
-                Text(song.title)
-                    .font(.title3.bold())
-                    .foregroundStyle(palette.text)
-                if !song.artist.isEmpty {
-                    Text(song.artist)
-                        .font(.body)
-                        .foregroundStyle(palette.secondaryText)
-                }
+            Text(song.displayLine)
+                .font(.title3.bold())
+                .multilineTextAlignment(.center)
+                .foregroundStyle(palette.text)
+                .onTapGesture { copy(song) }
+            actionButton(copied ? "Скопировано" : "Копировать «Исполнитель - Название»",
+                         systemImage: copied ? "checkmark" : "doc.on.doc") {
+                copy(song)
             }
-            .multilineTextAlignment(.center)
-            .textSelection(.enabled)
             actionButton("Найти в интернете", systemImage: "magnifyingglass") {
-                let query = song.artist.isEmpty ? song.title : "\(song.artist) \(song.title)"
-                if let url = AppSettings.searchURL(for: query) {
-                    openURL(url)
-                }
-            }
-            if let url = song.appleMusicURL {
-                actionButton("Открыть в Apple Music", systemImage: "music.note") {
+                if let url = AppSettings.searchURL(for: song.displayLine) {
                     openURL(url)
                 }
             }
             closeButton("Закрыть")
 
-        case .notFound:
+        case .notFound(let saved):
             Image(systemName: "questionmark.circle")
                 .font(.system(size: 56))
                 .foregroundStyle(palette.secondaryText)
                 .padding(.top, 12)
-            Text("Не удалось распознать")
+            Text("За минуту песня не нашлась")
+                .font(.title3.bold())
+                .multilineTextAlignment(.center)
+                .foregroundStyle(palette.text)
+            hint(saved
+                 ? "Фрагмент сохранён — попробую распознать ещё раз позже, при стабильной сети. Результат появится в «Настройки → Библиотека → Распознанные песни»."
+                 : "Попробуйте ещё раз, когда музыка звучит громче и без помех.")
+            actionButton("Ещё раз", systemImage: "arrow.clockwise") {
+                copied = false
+                controller.retry()
+            }
+            closeButton("Закрыть")
+
+        case .offline(let saved):
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 52))
+                .foregroundStyle(palette.secondaryText)
+                .padding(.top, 12)
+            Text("Нет связи")
                 .font(.title3.bold())
                 .foregroundStyle(palette.text)
-            Text("Попробуйте ещё раз, когда музыка играет громче и без помех.")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(palette.secondaryText)
+            hint(saved
+                 ? "Фрагмент записан. Распознаю автоматически, когда появится стабильная сотовая сеть или Wi-Fi, и покажу результат."
+                 : "Не удалось сохранить фрагмент. Попробуйте ещё раз, когда появится связь.")
             actionButton("Ещё раз", systemImage: "arrow.clockwise") {
                 controller.retry()
             }
@@ -102,10 +117,7 @@ struct RecognitionSheet: View {
             Text("Нет доступа к микрофону")
                 .font(.title3.bold())
                 .foregroundStyle(palette.text)
-            Text("Разрешите доступ в Настройках iPhone → PlayMyDisk → Микрофон.")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(palette.secondaryText)
+            hint("Разрешите доступ в Настройках iPhone → PlayMyDisk → Микрофон.")
             actionButton("Открыть Настройки", systemImage: "gear") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     openURL(url)
@@ -122,22 +134,31 @@ struct RecognitionSheet: View {
                 .font(.title3.bold())
                 .multilineTextAlignment(.center)
                 .foregroundStyle(palette.text)
-            if openedShazam {
-                Text("Открыл приложение Shazam. Когда вернётесь — нажмите «Закрыть», и музыка продолжит играть.")
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(palette.secondaryText)
-            } else {
-                Text("Используйте «Распознавание музыки» в Пункте управления. Если кнопки там нет: Настройки iPhone → Пункт управления → добавьте «Распознавание музыки».")
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(palette.secondaryText)
-            }
+            hint(openedShazam
+                 ? "Открыл приложение Shazam. Когда вернётесь — нажмите «Закрыть», и музыка продолжит играть."
+                 : "Используйте «Распознавание музыки» в Пункте управления. Если кнопки там нет: Настройки iPhone → Пункт управления → добавьте «Распознавание музыки».")
             Text("Подробности — в Журнале отладки.")
                 .font(.caption)
                 .foregroundStyle(palette.secondaryText)
             closeButton("Закрыть")
         }
+    }
+
+    private func copy(_ song: RecognizedSong) {
+        UIPasteboard.general.string = song.displayLine
+        Haptics.select()
+        copied = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            copied = false
+        }
+    }
+
+    private func hint(_ text: LocalizedStringKey) -> some View {
+        Text(text)
+            .font(.subheadline)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(palette.secondaryText)
     }
 
     private func actionButton(_ title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void) -> some View {
@@ -158,6 +179,7 @@ struct RecognitionSheet: View {
     private func closeButton(_ title: LocalizedStringKey) -> some View {
         Button {
             Haptics.tap()
+            copied = false
             controller.close()
         } label: {
             Text(title)
@@ -173,4 +195,125 @@ struct RecognitionSheet: View {
 /// Значок кнопки «Распознать»: логотип Shazam из SF Symbols, если он есть в системе.
 enum RecognizeIcon {
     static let name: String = UIImage(systemName: "shazam.logo") != nil ? "shazam.logo" : "waveform.and.magnifyingglass"
+}
+
+/// История распознаваний: найденные (нажатие — копировать), ожидающие сети и не найденные.
+struct RecognitionHistoryView: View {
+    let controller: RecognitionController
+
+    @Environment(\.palette) private var palette
+    @State private var copiedID: UUID?
+    @State private var isRetrying = false
+
+    private var store: RecognitionStore { controller.store }
+
+    var body: some View {
+        List {
+            let pending = store.entries.filter { $0.status == .pending }
+            let found = store.entries.filter { $0.status == .found }
+            let notFound = store.entries.filter { $0.status == .notFound }
+
+            if store.entries.isEmpty {
+                Text("Пока пусто. Нажмите кнопку распознавания на главном экране.")
+                    .foregroundStyle(.secondary)
+            }
+
+            if !pending.isEmpty {
+                Section {
+                    ForEach(pending) { entry in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Фрагмент от \(entry.date.formatted(date: .abbreviated, time: .shortened))")
+                            Text("Попыток: \(entry.attempts) из \(RecognitionStore.maxAttempts)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .swipeActions { deleteButton(entry) }
+                    }
+                    Button {
+                        Haptics.tap()
+                        isRetrying = true
+                        Task {
+                            await controller.processPending()
+                            isRetrying = false
+                        }
+                    } label: {
+                        HStack {
+                            Text("Повторить сейчас")
+                            if isRetrying {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(isRetrying)
+                } header: {
+                    Text("Ждут стабильной сети")
+                }
+            }
+
+            if !found.isEmpty {
+                Section {
+                    ForEach(found) { entry in
+                        Button {
+                            if let song = entry.song {
+                                UIPasteboard.general.string = song.displayLine
+                                Haptics.select()
+                                copiedID = entry.id
+                            }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(entry.song?.displayLine ?? "")
+                                        .foregroundStyle(.primary)
+                                    Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: copiedID == entry.id ? "checkmark" : "doc.on.doc")
+                                    .foregroundStyle(palette.accent)
+                            }
+                        }
+                        .swipeActions { deleteButton(entry) }
+                    }
+                } header: {
+                    Text("Найдено")
+                } footer: {
+                    Text("Нажмите на строку, чтобы скопировать «Исполнитель - Название».")
+                }
+            }
+
+            if !notFound.isEmpty {
+                Section {
+                    ForEach(notFound) { entry in
+                        Text("Фрагмент от \(entry.date.formatted(date: .abbreviated, time: .shortened))")
+                            .foregroundStyle(.secondary)
+                            .swipeActions { deleteButton(entry) }
+                    }
+                } header: {
+                    Text("Не найдено")
+                }
+            }
+
+            if !found.isEmpty || !notFound.isEmpty {
+                Section {
+                    Button("Очистить историю", role: .destructive) {
+                        Haptics.tap()
+                        store.clearFinished()
+                    }
+                }
+            }
+        }
+        .navigationTitle("Распознанные песни")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func deleteButton(_ entry: RecognitionEntry) -> some View {
+        Button(role: .destructive) {
+            Haptics.tap()
+            store.delete(entry.id)
+        } label: {
+            Label("Удалить", systemImage: "trash")
+        }
+    }
 }

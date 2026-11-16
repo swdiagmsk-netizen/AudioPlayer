@@ -66,7 +66,14 @@ final class AppContainer {
     func runLaunchTasks() async {
         guard !didFinishLaunchTasks else { return }
         await library.rescan()
-        playback.restoreOnLaunch()
+        if recognition.isPresented {
+            // Приложение открыто кнопкой «Распознать» — музыку включим после распознавания
+            if playback.restoreOnLaunch(allowAutoplay: false) {
+                recognition.resumeWhenClosed()
+            }
+        } else {
+            playback.restoreOnLaunch()
+        }
         didFinishLaunchTasks = true
         // Фоновый анализ громкости для выравнивания
         playback.analyzeLibraryLoudness()
