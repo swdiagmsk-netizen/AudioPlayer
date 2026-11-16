@@ -5,10 +5,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: xcode-27
-    timeout-minutes: 30
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,7 +27,9 @@ jobs:
         run: brew install xcodegen
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          set -o pipefail
+          xcodegen generate 2>&1 | tee build.log
 
       - name: Build (unsigned archive)
         run: |
@@ -34,27 +41,58 @@ jobs:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -archivePath build/AudioPlayer.xcarchive \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            2>&1 | tee build.log | tail -n 60
+            2>&1 | tee -a build.log | tail -n 60
 
       - name: Show compiler errors
         if: failure()
         run: |
           echo "===== ОШИБКИ КОМПИЛЯЦИИ ====="
-          grep -n "error:" build.log | head -n 50 || echo "Строк с error: не найдено, смотри шаг Build"
+          grep -n "error:" build.log | sort -u | head -n 80 || echo "Строк с error: не найдено, смотри шаг Build"
 
       - name: Package IPA
         run: |
           mkdir -p Payload
           cp -R build/AudioPlayer.xcarchive/Products/Applications/AudioPlayer.app Payload/
-          zip -qry AudioPlayer.ipa Payload
-          ls -lh AudioPlayer.ipa
+          zip -qry PlayMyDisk.ipa Payload
+          ls -lh PlayMyDisk.ipa
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: AudioPlayer-ipa
-          path: AudioPlayer.ipa
+          name: PlayMyDisk-ipa
+          path: PlayMyDisk.ipa
           if-no-files-found: error
+
+      - name: Publish release
+        continue-on-error: true
+        run: |
+          NOTES="PlayMyDisk, сборка ${{ github.run_number }}. Установка — см. README на главной странице репозитория."
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest PlayMyDisk.ipa --clobber
+            gh release edit latest --title "PlayMyDisk (сборка ${{ github.run_number }})" --notes "$NOTES"
+          else
+            gh release create latest PlayMyDisk.ipa --title "PlayMyDisk (сборка ${{ github.run_number }})" --notes "$NOTES"
+          fi
+
+      - name: Publish build log
+        if: always()
+        continue-on-error: true
+        run: |
+          rm -rf /tmp/cilog && mkdir -p /tmp/cilog && cd /tmp/cilog
+          echo "run=${{ github.run_number }} sha=${{ github.sha }} status=${{ job.status }} date=$(date -u +%FT%TZ)" > status.txt
+          LOG="$GITHUB_WORKSPACE/build.log"
+          if [ -f "$LOG" ]; then
+            grep "error:" "$LOG" | sort -u | head -n 300 > errors.txt || true
+            grep "warning:" "$LOG" | sort -u | head -n 300 > warnings.txt || true
+            tail -n 200 "$LOG" > tail.txt || true
+          fi
+          git init -q -b ci-logs
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "CI log, run ${{ github.run_number }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" ci-logs
