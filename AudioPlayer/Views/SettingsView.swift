@@ -34,6 +34,9 @@ struct SettingsView: View {
                     sectionLink(tr("Помощь"), value: tr("Инструкция, письмо разработчику, друзьям"), icon: "questionmark.circle", tint: Color(hex: "#14B8A6")) {
                         HelpSettingsView()
                     }
+                    sectionLink(tr("Сервис"), value: tr("Вытолкнуть воду из динамика"), icon: "wrench.and.screwdriver", tint: Color(hex: "#0EA5E9")) {
+                        ServiceSettingsView(container: container)
+                    }
                     sectionLink(tr("О приложении"), value: tr("Версия, форматы, кэш обложек"), icon: "info.circle", tint: Color(hex: "#5C6470")) {
                         AboutSettingsView(container: container)
                     }

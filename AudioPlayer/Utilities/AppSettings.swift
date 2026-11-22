@@ -68,6 +68,8 @@ enum SettingsKeys {
     static let allowDuplicates = "settings.allowDuplicates"
     /// Язык приложения: "en", "ru", "zh-Hant", "ja", "es", "de", "fr".
     static let appLanguage = "settings.appLanguage"
+    /// Выталкивание воды: "150", "165", "200" или "sweep" (плавно 150–200 Гц).
+    static let waterEjectMode = "waterEjectMode"
     /// Последняя открытая вкладка (ListID.key).
     static let lastListKey = "ui.lastListKey"
     /// Последняя открытая папка.
