@@ -71,12 +71,23 @@ jobs:
       - name: Publish release
         continue-on-error: true
         run: |
-          NOTES="PlayMyDisk, сборка ${{ github.run_number }}. Установка — см. README на главной странице репозитория."
+          # Описание релиза: первый раздел CHANGELOG.md («что нового») + ссылка на установку
+          {
+            echo "PlayMyDisk, сборка ${{ github.run_number }}"
+            echo
+            if [ -f CHANGELOG.md ]; then
+              awk '/^## /{n++} n==1' CHANGELOG.md
+              echo
+              echo "Вся история изменений / Full changelog: ${{ github.server_url }}/${{ github.repository }}/blob/main/CHANGELOG.md"
+              echo
+            fi
+            echo "Установка — см. README на главной странице репозитория. / How to install — see README on the repository main page."
+          } > release-notes.md
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest PlayMyDisk.ipa --clobber
-            gh release edit latest --title "PlayMyDisk (сборка ${{ github.run_number }})" --notes "$NOTES"
+            gh release edit latest --title "PlayMyDisk (сборка ${{ github.run_number }})" --notes-file release-notes.md
           else
-            gh release create latest PlayMyDisk.ipa --title "PlayMyDisk (сборка ${{ github.run_number }})" --notes "$NOTES"
+            gh release create latest PlayMyDisk.ipa --title "PlayMyDisk (сборка ${{ github.run_number }})" --notes-file release-notes.md
           fi
 
       # Модульные тесты логики очереди (True Shuffle, повтор) на симуляторе.
