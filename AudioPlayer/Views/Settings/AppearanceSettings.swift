@@ -133,18 +133,6 @@ struct AppearanceSettingsView: View {
                 Text(themeFooter)
             }
 
-            Section(tr("Визуализатор")) {
-                Picker(tr("Вид"), selection: $visualizer.withHaptic()) {
-                    ForEach(VisualizerKind.allCases, id: \.rawValue) { kind in
-                        Text(kind.title).tag(kind.rawValue)
-                    }
-                }
-                .pickerStyle(.segmented)
-                if visualizer == VisualizerKind.lines.rawValue {
-                    colorRow(title: tr("Цвет линий"), presets: linePresets, hex: $lineColorHex, showPalette: $showLinePalette)
-                }
-            }
-
             Section(tr("Цвет акцента (кнопки)")) {
                 colorRow(title: tr("Акцент"), presets: accentPresets, hex: $accentHex, showPalette: $showAccentPalette)
             }
@@ -169,6 +157,18 @@ struct AppearanceSettingsView: View {
                         }
                     }
                     .accessibilityAddTraits(option.id == skin ? .isSelected : [])
+                }
+                // Визуализатор есть только у скина «Классика» — выбор вида показываем под ним
+                if skin == "classic" {
+                    Picker(tr("Визуализатор"), selection: $visualizer.withHaptic()) {
+                        ForEach(VisualizerKind.allCases, id: \.rawValue) { kind in
+                            Text(kind.title).tag(kind.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    if visualizer == VisualizerKind.lines.rawValue {
+                        colorRow(title: tr("Цвет линий"), presets: linePresets, hex: $lineColorHex, showPalette: $showLinePalette)
+                    }
                 }
                 if skin == "retro" {
                     Picker(tr("Вид ретро"), selection: $retroStyle.withHaptic()) {
