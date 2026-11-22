@@ -10,6 +10,8 @@ struct TrackListView: View {
     let list: ListID
     /// Показать трек: прокрутить к нему, поставить в центр и подсветить.
     @Binding var focusUID: UUID?
+    /// Идёт поиск (курсор в строке поиска) — панель плеера сжимается.
+    @Binding var searchActive: Bool
     let onOpenFolder: (String) -> Void
     let onMenu: (TrackRecord, PlaylistEntry?) -> Void
     let onRequestDelete: ([TrackRecord]) -> Void
@@ -28,6 +30,11 @@ struct TrackListView: View {
     @State private var newFolderName = ""
     @State private var folderToDelete: String?
     @FocusState private var searchFocused: Bool
+    @State private var searchSelection: TextSelection?
+    /// Переход на другую вкладку во время поиска: подсветка последнего игравшего трека.
+    @State private var lastPlayedHighlightID: UUID?
+    /// Очистка поиска при смене вкладки не должна сбивать прокрутку к последнему треку.
+    @State private var skipQueryScroll = false
     @State private var flashRowID: UUID?
 
     private var lists: QueueAndPlaylistManager { container.lists }
@@ -103,7 +110,7 @@ struct TrackListView: View {
                         folderRow(name)
                     }
                     ForEach(rows) { item in
-                        row(item, isFound: item.id == foundID || item.id == flashRowID)
+                        row(item, isFound: item.id == foundID || item.id == flashRowID || item.id == lastPlayedHighlightID)
                             .id(item.id)
                     }
                     .onMove(perform: moveAction)
@@ -121,6 +128,8 @@ struct TrackListView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                // Потянул список пальцем — клавиатура уходит
+                .scrollDismissesKeyboard(.interactively)
                 .environment(\.editMode, $editMode)
                 .refreshable {
                     await container.library.rescan()
@@ -134,31 +143,60 @@ struct TrackListView: View {
                     }
                 }
                 .onChange(of: list) { _, _ in
+                    let wasSearching = searchFocused || !query.isEmpty
+                    if !query.isEmpty {
+                        skipQueryScroll = true
+                    }
                     query = ""
                     selection = []
                     editMode = .inactive
-                    scrollToCurrent(proxy: proxy, rows: self.rows, animated: false)
+                    if wasSearching {
+                        highlightLastPlayed(proxy: proxy)
+                    } else {
+                        lastPlayedHighlightID = nil
+                        scrollToCurrent(proxy: proxy, rows: self.rows, animated: false)
+                    }
                 }
-                .onChange(of: query) { _, _ in
+                .onChange(of: query) { _, newValue in
                     matchCursor = 0
+                    if skipQueryScroll {
+                        skipQueryScroll = false
+                        return
+                    }
+                    if !newValue.isEmpty {
+                        lastPlayedHighlightID = nil
+                    }
                     let currentRows = self.rows
                     let currentFound = matches(in: currentRows)
                     if let first = currentFound.first {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            proxy.scrollTo(currentRows[first].id, anchor: .center)
-                        }
+                        scrollToMatch(proxy: proxy, rows: currentRows, index: first)
                     } else if query.isEmpty {
                         scrollToCurrent(proxy: proxy, rows: currentRows, animated: true)
                     }
+                }
+                .onChange(of: searchFocused) { _, focused in
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        searchActive = focused
+                    }
+                    if !focused {
+                        lastPlayedHighlightID = nil
+                    }
+                    if focused {
+                        // Касание строки поиска — курсор в конец уже введённого текста
+                        Task { @MainActor in
+                            searchSelection = TextSelection(insertionPoint: query.endIndex)
+                        }
+                    }
+                }
+                .onDisappear {
+                    searchActive = false
                 }
                 .onChange(of: matchCursor) { _, newValue in
                     let currentRows = self.rows
                     let currentFound = matches(in: currentRows)
                     guard !currentFound.isEmpty else { return }
                     let index = currentFound[min(newValue, currentFound.count - 1)]
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(currentRows[index].id, anchor: .center)
-                    }
+                    scrollToMatch(proxy: proxy, rows: currentRows, index: index)
                 }
                 .onChange(of: focusUID) { _, uid in
                     guard let uid else { return }
@@ -220,22 +258,20 @@ struct TrackListView: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(palette.secondaryText)
-                TextField(tr("Название или № строки"), text: $query)
+                // VERIFY: TextField с выделением (iOS 18+) — проверить постановку курсора в конец
+                TextField(tr("Название или № строки"), text: $query, selection: $searchSelection)
                     .focused($searchFocused)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .submitLabel(.next)
+                    .submitLabel(.done)
                     .onSubmit {
-                        // Return — к следующему совпадению
-                        matchCursor += 1
-                        let count = matches(in: rows).count
-                        if count > 0 { matchCursor %= count }
-                        searchFocused = true
+                        // «Ввод» — закончить ввод и спрятать клавиатуру
+                        searchFocused = false
                     }
                     .foregroundStyle(palette.text)
                 if !query.isEmpty {
                     Button {
-                        query = ""
+                        clearSearch()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(palette.secondaryText)
@@ -246,7 +282,60 @@ struct TrackListView: View {
             .padding(.horizontal, 12)
             .frame(height: 40)
             .background(RoundedRectangle(cornerRadius: 10).fill(palette.button))
+            // Двойное касание строки поиска — очистить и вводить заново
+            // VERIFY: двойное касание поверх текстового поля
+            .simultaneousGesture(TapGesture(count: 2).onEnded { clearSearch() })
 
+            if searchFocused {
+                searchNavigation
+            } else {
+                listButtons
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
+    }
+
+    /// Во время поиска: ▲ ▼ по совпадениям и «Готово».
+    private var searchNavigation: some View {
+        HStack(spacing: 8) {
+            smallButton(systemImage: "chevron.up", label: tr("Предыдущее совпадение")) {
+                stepMatch(-1)
+            }
+            smallButton(systemImage: "chevron.down", label: tr("Следующее совпадение")) {
+                stepMatch(1)
+            }
+            Button {
+                Haptics.tap()
+                searchFocused = false
+            } label: {
+                Text(tr("Готово"))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .padding(.horizontal, 6)
+                    .frame(height: 40)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func stepMatch(_ delta: Int) {
+        let count = matches(in: rows).count
+        guard count > 0 else { return }
+        Haptics.tap()
+        matchCursor = ((min(matchCursor, count - 1) + delta) % count + count) % count
+    }
+
+    private func clearSearch() {
+        Haptics.tap()
+        query = ""
+        searchSelection = nil
+        searchFocused = true
+    }
+
+    /// Обычный режим: перемешать, по алфавиту, выбрать несколько.
+    private var listButtons: some View {
+        HStack(spacing: 8) {
             smallButton(systemImage: "shuffle", label: tr("Перемешать список")) {
                 lists.shuffleList(list)
                 onToast(tr("Список перемешан"))
@@ -282,8 +371,6 @@ struct TrackListView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(editMode.isEditing ? tr("Готово") : tr("Выбрать несколько"))
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
     }
 
     private func smallButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
@@ -492,6 +579,41 @@ struct TrackListView: View {
         playback.play(items: uids, startUID: item.track.uid, contextKey: list.key)
         query = ""
         searchFocused = false
+    }
+
+    /// Смена вкладки во время поиска: подсветить трек, игравший в этом списке последним.
+    /// Это играющий сейчас трек, если он из этого списка, иначе — прослушанный позже остальных.
+    private func highlightLastPlayed(proxy: ScrollViewProxy) {
+        let currentRows = self.rows
+        let playingUID = playback.currentTrack?.uid
+        let index = currentRows.firstIndex(where: { $0.track.uid == playingUID })
+            ?? currentRows.indices
+                .filter { currentRows[$0].track.lastPlayedAt != nil }
+                .max(by: { currentRows[$0].track.lastPlayedAt! < currentRows[$1].track.lastPlayedAt! })
+        guard let index else {
+            lastPlayedHighlightID = nil
+            return
+        }
+        lastPlayedHighlightID = currentRows[index].id
+        Task { @MainActor in
+            // Список новой вкладки должен успеть построиться
+            try? await Task.sleep(for: .milliseconds(150))
+            if searchFocused {
+                scrollToMatch(proxy: proxy, rows: currentRows, index: index)
+            } else {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(currentRows[index].id, anchor: .center)
+                }
+            }
+        }
+    }
+
+    /// Найденная строка — третьей сверху, чтобы её не закрывала клавиатура.
+    private func scrollToMatch(proxy: ScrollViewProxy, rows: [ListRowItem], index: Int) {
+        let target = rows[max(0, index - 2)].id
+        withAnimation(.easeInOut(duration: 0.25)) {
+            proxy.scrollTo(target, anchor: .top)
+        }
     }
 
     private func scrollToCurrent(proxy: ScrollViewProxy, rows: [ListRowItem], animated: Bool) {

@@ -14,6 +14,8 @@ struct PlayerPanel: View {
     let onSleepTimer: () -> Void
     let onChapters: () -> Void
     let onRecognize: () -> Void
+    /// Режим поиска: остаётся только ряд кнопок управления.
+    var compact = false
 
     @Environment(\.palette) private var palette
     @AppStorage(SettingsKeys.skipInterval) private var skipInterval: Int = 15
@@ -33,14 +35,18 @@ struct PlayerPanel: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            display
-            progress
+            if !compact {
+                display
+                progress
+            }
             mainControls
-            secondaryControls
+            if !compact {
+                secondaryControls
+            }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
+        .padding(.top, compact ? 6 : 10)
+        .padding(.bottom, compact ? 6 : 12)
         .background(palette.panel)
         .overlay(alignment: .bottom) {
             Rectangle().fill(palette.line).frame(height: 1)

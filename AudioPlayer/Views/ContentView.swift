@@ -39,6 +39,8 @@ struct ContentView: View {
     @State private var mailTarget: TrackRecord?
     @State private var duplicateNotice: [DuplicateInfo] = []
     @State private var focusUID: UUID?
+    /// Поиск в списке активен — панель плеера сжата до ряда кнопок.
+    @State private var searchActive = false
     @State private var toastTask: Task<Void, Never>?
 
     private var palette: Palette {
@@ -65,7 +67,8 @@ struct ContentView: View {
                 onEqualizer: { showEqualizer = true },
                 onSleepTimer: { showSleepTimer = true },
                 onChapters: { showChapters = true },
-                onRecognize: { container.recognition.start() }
+                onRecognize: { container.recognition.start() },
+                compact: searchActive
             )
             ListTabsBar(
                 selected: $selectedList,
@@ -85,6 +88,7 @@ struct ContentView: View {
                 container: container,
                 list: selectedList,
                 focusUID: $focusUID,
+                searchActive: $searchActive,
                 onOpenFolder: { path in
                     selectedList = .folder(path)
                 },
